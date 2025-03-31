@@ -1,0 +1,28 @@
+version: '3.8'
+services:
+  analytics:
+    image: soccer-analytics-dashboard
+    build:
+      context: ..
+      dockerfile: ./Dockerfile
+    container_name: ncsoccer-analytics
+    ports:
+      - "8050:8050"   # Direct Dash access with Auth0 authentication
+    volumes:
+      # Mount the entire analysis directory for access to data
+      - ../analysis:/app/analysis
+      - ./data:/app/data  # Persistent volume for SQLite database
+    environment:
+      - PARQUET_FILE=${PARQUET_FILE:-/app/analysis/data/data.parquet}
+      - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
+      - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
+      - AUTH0_DOMAIN=${AUTH0_DOMAIN}
+      - APP_SECRET_KEY=${APP_SECRET_KEY}
+      - AUTH_FLASK_ROUTES=${AUTH_FLASK_ROUTES:-true}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8050/"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 5s

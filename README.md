@@ -1,5 +1,7 @@
 # NC Soccer Analytics Dashboard
 
+![Dashboard Screenshot](./docs/images/dashboard.png)
+
 A Plotly Dash application for exploring soccer match data and visualizing team performance.
 
 ## Features

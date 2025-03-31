@@ -24,11 +24,16 @@ primary_region = "iad"  # virginia region
 [[vm]]
   cpu_kind = "shared"
   cpus = 1
-  memory_mb = 1024
+  memory_mb = 2048
 
 [deploy]
   strategy = "immediate"
   release_command = "uv pip install --system ."
+
+# Health check configuration
+[metrics]
+  port = 8050
+  path = "/"
 
 [[services]]
   protocol = "tcp"

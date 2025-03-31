@@ -1,5 +1,5 @@
 app = "ncsh-dashboard"
-primary_region = "lhr"  # London region, adjust as needed
+primary_region = "iad"  # virginia region
 
 [build]
   dockerfile = "Dockerfile"

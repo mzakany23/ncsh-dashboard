@@ -9,8 +9,10 @@ RUN apt-get update && apt-get install -y \
     nginx \
     && rm -rf /var/lib/apt/lists/*
 
-# Create directory for data
+# Create directory for data and copy data files
 RUN mkdir -p /app/data
+COPY data/data.parquet /app/data/
+COPY data/team_groups.db /app/data/
 
 # Install uv using pip
 RUN pip install --no-cache-dir uv
@@ -64,7 +66,7 @@ service nginx start \n\
 \n\
 # Start Dash app with Gunicorn config \n\
 echo "Starting Dash application..." \n\
-gunicorn -c gunicorn.conf.py app:server \n\
+cd /app && gunicorn -c gunicorn.conf.py app:server \n\
 ' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # Expose ports

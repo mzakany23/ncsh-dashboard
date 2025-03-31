@@ -23,8 +23,9 @@ COPY gunicorn.conf.py .
 COPY app.py .
 COPY src /app/src
 
-# Install dependencies using uv
-RUN uv pip install --system .
+# Install dependencies using uv and add eventlet
+RUN uv pip install --system . && \
+    pip install --no-cache-dir eventlet
 
 # Create Nginx configuration without basic auth
 RUN echo 'server { \
@@ -60,6 +61,9 @@ RUN echo 'server { \
 RUN echo '#!/bin/bash \n\
 echo "Starting NC Soccer Analytics Dashboard" \n\
 \n\
+# Set the correct PARQUET_FILE path \n\
+export PARQUET_FILE=/app/data/data.parquet \n\
+\n\
 # Start Nginx \n\
 echo "Starting Nginx..." \n\
 service nginx start \n\
@@ -75,6 +79,7 @@ EXPOSE 80 8050
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+ENV PARQUET_FILE=/app/data/data.parquet
 
 # Run the entrypoint script
 CMD ["/app/entrypoint.sh"]

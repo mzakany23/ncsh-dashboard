@@ -212,8 +212,14 @@ class Auth0Auth(Auth):
         # Clear session stored data
         flask.session.clear()
 
-        # Redirect user to logout endpoint
-        return_url = flask.request.host_url
+        # Force HTTPS for the return URL when in production
+        if flask.request.host == 'ncsh-dashboard.fly.dev':
+            # When on Fly.io, make sure we're using HTTPS
+            return_url = "https://ncsh-dashboard.fly.dev/"
+        else:
+            # Local development
+            return_url = flask.request.host_url
+            
         params = {'returnTo': return_url, 'client_id': CLIENT_ID}
         r = flask.redirect(LOGOUT_URL + '?' + urlencode(params))
         r.delete_cookie(COOKIE_AUTH_USER_NAME)

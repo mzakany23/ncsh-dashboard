@@ -57,12 +57,33 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/conf.d/dash.conf
 
-# Create simplified entrypoint script without auth setup
+# Create improved entrypoint script with better debugging
 RUN echo '#!/bin/bash \n\
 echo "Starting NC Soccer Analytics Dashboard" \n\
 \n\
-# Set the correct PARQUET_FILE path \n\
-export PARQUET_FILE=/app/data/data.parquet \n\
+# Explicitly set the environment variables needed by the app \n\
+export PARQUET_FILE=${PARQUET_FILE:-"/app/data/data.parquet"} \n\
+export AUTH_FLASK_ROUTES=${AUTH_FLASK_ROUTES:-"true"} \n\
+\n\
+# Log important environment settings \n\
+echo "Environment:" \n\
+echo "- PARQUET_FILE: $PARQUET_FILE" \n\
+echo "- AUTH_FLASK_ROUTES: $AUTH_FLASK_ROUTES" \n\
+echo "- AUTH0_CALLBACK_URL: $AUTH0_CALLBACK_URL" \n\
+echo "- PYTHONPATH: $PYTHONPATH" \n\
+\n\
+# Check if data files exist \n\
+if [ ! -f "$PARQUET_FILE" ]; then \n\
+    echo "ERROR: Parquet file not found at $PARQUET_FILE" \n\
+    exit 1 \n\
+fi \n\
+\n\
+if [ ! -f "/app/data/team_groups.db" ]; then \n\
+    echo "WARNING: team_groups.db not found, will be created by the app" \n\
+fi \n\
+\n\
+# Create assets directory if it doesn\'t exist \n\
+mkdir -p /app/assets \n\
 \n\
 # Start Nginx \n\
 echo "Starting Nginx..." \n\

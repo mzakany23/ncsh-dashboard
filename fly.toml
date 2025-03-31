@@ -7,6 +7,15 @@ primary_region = "iad"  # virginia region
 [env]
   PYTHONUNBUFFERED = "1"
   PYTHONPATH = "/app"
+  PARQUET_FILE = "/app/data/data.parquet"
+  AUTH_FLASK_ROUTES = "true"  # Enable Auth0 authentication
+  # Auth0 configuration
+  AUTH0_CLIENT_ID = "J5SWYsyVTwGHZlnSPXoRQBh5F9JK3qUK"
+  AUTH0_DOMAIN = "dev-0e4v07vo.auth0.com" 
+  AUTH0_CALLBACK_URL = "https://ncsh-dashboard.fly.dev/login/callback"
+  # These should be set as secrets
+  # AUTH0_CLIENT_SECRET = "${AUTH0_CLIENT_SECRET}"
+  # APP_SECRET_KEY = "${APP_SECRET_KEY}"
 
 [http_service]
   internal_port = 8050
@@ -15,6 +24,12 @@ primary_region = "iad"  # virginia region
   auto_start_machines = true
   min_machines_running = 0
   processes = ["app"]
+
+  [[http_service.headers]]
+    for = "/*"
+    [http_service.headers.values]
+      X-Forwarded-Proto = "https" 
+      Strict-Transport-Security = "max-age=31536000; includeSubDomains"
 
   [http_service.concurrency]
     type = "requests"
@@ -35,21 +50,5 @@ primary_region = "iad"  # virginia region
   port = 8050
   path = "/"
 
-[[services]]
-  protocol = "tcp"
-  internal_port = 80
-  processes = ["app"]
-
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
-
-  [[services.tcp_checks]]
-    interval = "15s"
-    timeout = "2s"
-    grace_period = "1s"
-    restart_limit = 0
+# Remove the duplicate service definition
+# The http_service above will handle both HTTP and HTTPS

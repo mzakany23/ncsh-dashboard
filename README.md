@@ -17,12 +17,23 @@ A Plotly Dash application for exploring soccer match data and visualizing team p
 - Docker
 - Docker Compose
 
+### Project Structure
+
+```
+ncsh-dashboard/
+├── analysis/           # Application code
+├── data/              # Data directory (mounted as volume)
+│   └── data.parquet   # Main data file
+├── Dockerfile
+└── docker-compose.yml
+```
+
 ### Running the Application
 
 1. Clone this repository
+2. Place your `data.parquet` file in the `data/` directory
 3. Run `docker-compose up --build`
 4. Access the dashboard at http://localhost:8090
-   - Default credentials: Username: `ncsoccer`, Password: `password`
 
 ### Environment Variables
 
@@ -36,7 +47,7 @@ The development server will be available at http://localhost:8050.
 
 ## Data
 
-The application uses soccer match data from a Parquet file. The data includes:
+The application uses soccer match data from a Parquet file located in the `data/` directory. The data includes:
 
 - Match dates
 - Home and away teams

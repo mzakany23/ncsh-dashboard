@@ -10,13 +10,19 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create directory for data
-RUN mkdir -p /app/analysis/data
+RUN mkdir -p /app/data
 
-# Install dependencies directly with pip instead of uv
-RUN pip install --no-cache-dir dash>=2.11.1 plotly pandas duckdb numpy dash-bootstrap-components gunicorn eventlet authlib requests six python-dotenv
+# Install uv using pip
+RUN pip install --no-cache-dir uv
 
-# Copy the application code
-COPY analysis /app/analysis
+# Copy project files
+COPY pyproject.toml .
+COPY gunicorn.conf.py .
+COPY app.py .
+COPY src /app/src
+
+# Install dependencies using uv
+RUN uv pip install --system .
 
 # Create Nginx configuration without basic auth
 RUN echo 'server { \

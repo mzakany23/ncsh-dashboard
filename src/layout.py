@@ -301,10 +301,10 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                             "Select filters above to analyze team performance data."
                         ], className="small text-muted mb-0")
                     ])
-                ], className="filter-panel")
-            ], lg=3, md=4, sm=12, className="mb-4"),
+                ], className="filter-panel"),
+            ], xs=12, md=4, lg=3, className="filter-sidebar mb-4"),
 
-            # Right main content area
+            # Main content area
             dbc.Col([
                 # Summary statistics cards in a single row at the top of the story
                 html.H4("Performance Summary", className="section-header"),
@@ -322,7 +322,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                         html.Div("Total matches", className="text-muted small")
                                     ])
                                 ], className="summary-card h-100")
-                            ], width=2, className="px-1"),
+                            ], xs=12, sm=6, md=4, lg=2, className="mb-2 px-1"),
 
                             dbc.Col([
                                 dbc.Card([
@@ -332,7 +332,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                         html.Div("Percentage of wins", className="text-muted small")
                                     ])
                                 ], className="summary-card h-100")
-                            ], width=2, className="px-1"),
+                            ], xs=12, sm=6, md=4, lg=2, className="mb-2 px-1"),
 
                             dbc.Col([
                                 dbc.Card([
@@ -342,7 +342,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                         html.Div("Percentage of losses", className="text-muted small")
                                     ])
                                 ], className="summary-card h-100")
-                            ], width=2, className="px-1"),
+                            ], xs=12, sm=6, md=4, lg=2, className="mb-2 px-1"),
 
                             dbc.Col([
                                 dbc.Card([
@@ -352,7 +352,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                         html.Div("Total goals for", className="text-muted small")
                                     ])
                                 ], className="summary-card h-100")
-                            ], width=2, className="px-1"),
+                            ], xs=12, sm=6, md=4, lg=2, className="mb-2 px-1"),
 
                             dbc.Col([
                                 dbc.Card([
@@ -362,7 +362,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                         html.Div("Total goals against", className="text-muted small")
                                     ])
                                 ], className="summary-card h-100")
-                            ], width=2, className="px-1"),
+                            ], xs=12, sm=6, md=4, lg=2, className="mb-2 px-1"),
 
                             dbc.Col([
                                 dbc.Card([
@@ -372,7 +372,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                         html.Div("Goals scored - conceded", className="text-muted small")
                                     ])
                                 ], className="summary-card h-100")
-                            ], width=2, className="px-1")
+                            ], xs=12, sm=6, md=4, lg=2, className="mb-2 px-1")
                         ], className="mb-4 mx-0")
                     ]
                 ),
@@ -406,10 +406,10 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                 dbc.Row([
                                     dbc.Col([
                                         dcc.Graph(id="goal-stats-chart")
-                                    ], md=6),
+                                    ], xs=12, md=6, className="mb-3 mb-md-0"),
                                     dbc.Col([
                                         dcc.Graph(id="goal-stats-pie")
-                                    ], md=6)
+                                    ], xs=12, md=6)
                                 ])
                             ])
                         ], className="mb-4")
@@ -441,7 +441,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                                 dcc.Graph(id="opponent-win-rate-chart")
                                             ])
                                         ])
-                                    ], md=6),
+                                    ], xs=12, md=6, className="mb-3 mb-md-0"),
                                     dbc.Col([
                                         dbc.Card([
                                             dbc.CardHeader("Goal Performance"),
@@ -449,7 +449,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                                 dcc.Graph(id="opponent-goal-diff-chart")
                                             ])
                                         ])
-                                    ], md=6),
+                                    ], xs=12, md=6),
                                 ], className="mb-3")
                             ]
                         )
@@ -552,9 +552,9 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                         ], className="text-center py-3")
                     ], width=12)
                 ], className="mt-4")
-            ], lg=9, md=8, sm=12)
-        ]),
+            ], xs=12, md=8, lg=9)
+        ], className="mt-3"),
 
         # Hidden div for storing initial load state
         html.Div(id='initial-load', style={'display': 'none'})
-    ], fluid=True)
+    ], fluid=True, className="px-3 px-md-4")

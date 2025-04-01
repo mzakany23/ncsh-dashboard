@@ -11,7 +11,7 @@ primary_region = "iad"  # virginia region
   AUTH_FLASK_ROUTES = "true"  # Enable Auth0 authentication
   # Auth0 configuration
   AUTH0_CLIENT_ID = "J5SWYsyVTwGHZlnSPXoRQBh5F9JK3qUK"
-  AUTH0_DOMAIN = "dev-0e4v07vo.auth0.com" 
+  AUTH0_DOMAIN = "dev-0e4v07vo.auth0.com"
   AUTH0_CALLBACK_URL = "https://ncsh-dashboard.fly.dev/login/callback"
   # These should be set as secrets
   # AUTH0_CLIENT_SECRET = "${AUTH0_CLIENT_SECRET}"
@@ -28,7 +28,7 @@ primary_region = "iad"  # virginia region
   [[http_service.headers]]
     for = "/*"
     [http_service.headers.values]
-      X-Forwarded-Proto = "https" 
+      X-Forwarded-Proto = "https"
       Strict-Transport-Security = "max-age=31536000; includeSubDomains"
 
   [http_service.concurrency]

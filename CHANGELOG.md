@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2024-04-06
+
+### Added
+- AI-powered analysis feature using Claude API
+- Generate button to create on-demand summaries and insights
+- Markdown rendering of AI analysis with styled output
+
+### Fixed
+- Deployment configuration for Fly.io
+
 ## [1.0.0] - 2024-03-21
 
 ### Added

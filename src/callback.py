@@ -21,6 +21,9 @@ from src.util import (
     filter_matches_by_opponents,
     identify_worthy_opponents
 )
+from dash import callback, html
+import dash
+from src.claude_summary import generate_summary
 
 
 def init_callbacks(app, teams, team_groups_param, conn):
@@ -1415,3 +1418,74 @@ def init_callbacks(app, teams, team_groups_param, conn):
         if current_style.get("display") == "none":
             return {"display": "block"}
         return {"display": "none"}
+
+    @app.callback(
+        Output('ai-summary-container', 'children'),
+        [
+            Input('generate-summary-button', 'n_clicks')
+        ],
+        [
+            State('team-dropdown', 'value'),
+            State('date-range-picker', 'start_date'),
+            State('date-range-picker', 'end_date'),
+            State('opponent-dropdown', 'value'),
+            State('dashboard-metrics', 'children'),
+            State('match-results-table', 'data')
+        ],
+        prevent_initial_call=True
+    )
+    def update_ai_summary(n_clicks, team, start_date, end_date, opponent_filter, dashboard_metrics, match_data):
+        """Generate and display AI summary of dashboard data."""
+        if n_clicks == 0:
+            return html.Div("Click the button to generate an AI analysis of the current dashboard data.")
+
+        if not team:
+            return html.Div("Please select a team to analyze.")
+
+        # Convert match data to DataFrame
+        match_df = pd.DataFrame(match_data) if match_data else pd.DataFrame()
+
+        # Extract metrics from dashboard_metrics (these are stored in a hidden div)
+        metrics = {}
+        try:
+            context = callback_context
+            if context.triggered:
+                # Extract metrics from the page state
+                metrics = {
+                    "games_played": len(match_df),
+                    "win_rate_value": f"{len(match_df[match_df['result'] == 'Win']) / max(1, len(match_df)) * 100:.1f}%",
+                    "loss_rate_value": f"{len(match_df[match_df['result'] == 'Loss']) / max(1, len(match_df)) * 100:.1f}%",
+                    "goals_scored": sum(match_df['score'].apply(lambda x: int(x.split(' - ')[0]) if ' - ' in str(x) and x.split(' - ')[0].isdigit() else 0)),
+                    "goals_conceded": sum(match_df['score'].apply(lambda x: int(x.split(' - ')[1]) if ' - ' in str(x) and x.split(' - ')[1].isdigit() else 0)),
+                }
+                metrics["goal_diff"] = metrics["goals_scored"] - metrics["goals_conceded"]
+        except Exception as e:
+            metrics = {
+                "games_played": 0,
+                "win_rate_value": "0.0%",
+                "loss_rate_value": "0.0%",
+                "goals_scored": 0,
+                "goals_conceded": 0,
+                "goal_diff": 0
+            }
+
+        # Format the date range
+        date_range = [
+            start_date or "All time",
+            end_date or datetime.now().strftime("%Y-%m-%d")
+        ]
+
+        # Generate the summary using Claude
+        summary_markdown = generate_summary(
+            selected_team=team,
+            date_range=date_range,
+            opponent_filter=opponent_filter or "All opponents",
+            metrics=metrics,
+            match_data=match_df
+        )
+
+        # Convert markdown to HTML and return
+        return html.Div(
+            dcc.Markdown(summary_markdown),
+            className='ai-summary-content markdown-body'
+        )

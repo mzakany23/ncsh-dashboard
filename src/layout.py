@@ -582,6 +582,20 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                     ]
                 ),
 
+                # AI Summary Section
+                html.Div([
+                    html.Div([
+                        html.H2('AI Analysis', className='section-title'),
+                        html.Button('Generate Analysis', id='generate-summary-button',
+                                    className='btn btn-primary', n_clicks=0),
+                        dcc.Loading(
+                            type="circle",
+                            children=html.Div(id='ai-summary-container', className='ai-summary-content',
+                                             style={'marginTop': '20px'})
+                        )
+                    ], className='card')
+                ], id='ai-summary-section', className='section'),
+
                 # Footer
                 dbc.Row([
                     dbc.Col([

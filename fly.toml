@@ -16,6 +16,7 @@ primary_region = "iad"  # virginia region
   # These should be set as secrets
   # AUTH0_CLIENT_SECRET = "${AUTH0_CLIENT_SECRET}"
   # APP_SECRET_KEY = "${APP_SECRET_KEY}"
+  # ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"
 
 [mounts]
   source = "litefs"

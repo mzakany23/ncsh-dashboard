@@ -551,5 +551,85 @@ def init_style():
             font-size: 18px;
         }
     }
+
+    /* AI Summary Section */
+    #ai-summary-section {
+        margin-top: 20px;
+    }
+
+    .ai-summary-content {
+        padding: 15px;
+        background-color: var(--white);
+        border-radius: 4px;
+        min-height: 100px;
+    }
+
+    .ai-summary-content h1,
+    .ai-summary-content h2,
+    .ai-summary-content h3 {
+        color: var(--primary-color);
+        margin-bottom: 10px;
+    }
+
+    .ai-summary-content h1 {
+        font-size: 22px;
+    }
+
+    .ai-summary-content h2 {
+        font-size: 20px;
+    }
+
+    .ai-summary-content h3 {
+        font-size: 18px;
+    }
+
+    .ai-summary-content ul,
+    .ai-summary-content ol {
+        padding-left: 20px;
+        margin-bottom: 10px;
+    }
+
+    .ai-summary-content li {
+        margin-bottom: 5px;
+    }
+
+    .ai-summary-content p {
+        margin-bottom: 10px;
+        line-height: 1.5;
+    }
+
+    .ai-summary-content strong {
+        font-weight: 600;
+    }
+
+    .ai-summary-content em {
+        font-style: italic;
+    }
+
+    .ai-summary-content blockquote {
+        border-left: 3px solid var(--primary-color);
+        padding-left: 10px;
+        margin: 10px 0;
+        color: #555;
+    }
+
+    .ai-summary-content code {
+        background-color: #f5f5f5;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-family: monospace;
+    }
+
+    /* Mobile adjustments for AI summary */
+    @media (max-width: 1024px) {
+        #generate-summary-button {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .ai-summary-content {
+            padding: 10px;
+        }
+    }
     '''
     return custom_css

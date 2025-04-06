@@ -1433,10 +1433,25 @@ def init_callbacks(app, teams, team_groups_param, conn):
             return True, {"bottom": 0, "height": 20, "left": 0, "right": 20, "top": 20, "width": 20, "x": 10, "y": 10}
         return False, {}
 
+    # Immediately trigger spinning animation when icon is clicked
+    @app.callback(
+        Output('ai-summary-icon', 'children', allow_duplicate=True),
+        Input('ai-summary-icon', 'n_clicks'),
+        prevent_initial_call=True
+    )
+    def start_spinning_icon(n_clicks):
+        """Make the icon start spinning immediately when clicked"""
+        if not n_clicks:
+            return no_update
+
+        # Start spinning immediately
+        return html.I(className="fas fa-robot ai-icon ai-icon-spinning")
+
     # AI summary generation callback
     @app.callback(
         [Output('ai-summary-container', 'children'),
-         Output('ai-summary-container', 'style')],
+         Output('ai-summary-container', 'style'),
+         Output('ai-summary-icon', 'children')],
         [Input('ai-summary-icon', 'n_clicks')],
         [State('team-dropdown', 'value'),
          State('team-selection-type', 'value'),
@@ -1458,13 +1473,19 @@ def init_callbacks(app, teams, team_groups_param, conn):
                           goals_conceded, goal_diff, match_data):
         """Generate and display AI summary of dashboard data when icon is clicked."""
         if not n_clicks:
-            return no_update, no_update
+            return no_update, no_update, no_update
+
+        # Create spinning icon - to be returned right away, showing generation is in progress
+        spinning_icon = html.I(className="fas fa-robot ai-icon ai-icon-spinning")
+
+        # Create normal icon - to be returned when generation is complete
+        normal_icon = html.I(className="fas fa-robot ai-icon")
 
         # Use the team group value if team selection type is 'group'
         selected_team = team_group if selection_type == 'group' else team
 
         if not selected_team:
-            return html.Div("Please select a team to analyze."), {'display': 'block'}
+            return html.Div("Please select a team to analyze."), {'display': 'block'}, normal_icon
 
         # Convert match data to DataFrame
         match_df = pd.DataFrame(match_data) if match_data else pd.DataFrame()
@@ -1494,7 +1515,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
                 ])
             ])
 
-            # Generate the summary using Claude (non-streaming for simplicity and compatibility)
+            # Generate the summary using Claude
             print(f"Calling Claude API for summary generation for team: {selected_team}")
             import os
             print(f"ANTHROPIC_API_KEY set: {bool(os.getenv('ANTHROPIC_API_KEY'))}")
@@ -1514,17 +1535,18 @@ def init_callbacks(app, teams, team_groups_param, conn):
                 return html.Div([
                     html.P("Error generating AI analysis:"),
                     html.P(summary_markdown)
-                ], style={"color": "red"}), {'display': 'block'}
+                ], style={"color": "red"}), {'display': 'block'}, normal_icon
 
-            # Return the markdown content
-            return dcc.Markdown(summary_markdown, dangerously_allow_html=True), {'display': 'block'}
+            # Return the markdown content with normal icon
+            return dcc.Markdown(summary_markdown, dangerously_allow_html=True), {'display': 'block'}, normal_icon
 
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
             print(f"Error generating AI summary: {str(e)}")
             print(error_trace)
+
             return html.Div([
                 html.P("Error generating AI analysis:"),
                 html.P(str(e))
-            ], style={"color": "red"}), {'display': 'block'}
+            ], style={"color": "red"}), {'display': 'block'}, normal_icon

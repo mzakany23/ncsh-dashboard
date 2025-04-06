@@ -113,6 +113,7 @@ def init_style():
         margin-bottom: 15px;
         display: flex;
         align-items: center;
+        justify-content: space-between;
         width: 100%;
         border-bottom: 2px solid #F5F5F5;
         padding-bottom: 0.5rem;
@@ -657,10 +658,20 @@ def init_style():
         margin-bottom: 15px;
         display: flex;
         align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        border-bottom: 2px solid #F5F5F5;
+        padding-bottom: 0.5rem;
+    }
+
+    .section-header {
+        margin: 0;
+        padding: 0;
+        border-bottom: none;
     }
 
     .ai-icon-container {
-        margin-left: 12px;
+        margin-left: auto;
         display: inline-flex;
         align-items: center;
     }
@@ -677,10 +688,10 @@ def init_style():
 
     .ai-icon {
         color: #20A7C9;
-        font-size: 1.4rem;
+        font-size: 1.25rem;
         cursor: pointer;
         transition: transform 0.3s, color 0.3s;
-        padding: 5px;
+        padding: 6px;
         background-color: rgba(32, 167, 201, 0.1);
         border-radius: 50%;
         box-shadow: 0 0 5px rgba(32, 167, 201, 0.2);
@@ -693,66 +704,92 @@ def init_style():
         box-shadow: 0 0 8px rgba(32, 167, 201, 0.4);
     }
 
+    /* Spinning animation for AI icon when generating */
+    .ai-icon-spinning {
+        animation: spin 1.5s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
     /* AI Summary Content */
     .ai-summary-content {
-        background-color: rgba(32, 167, 201, 0.05);
-        border-left: 3px solid var(--primary-color);
-        padding: 15px;
+        background-color: rgba(245, 245, 245, 0.5);
+        border-left: 3px solid #20A7C9;
+        padding: 16px;
         border-radius: 4px;
-        font-size: 0.95rem;
+        font-size: 14px;
         line-height: 1.5;
+        margin-bottom: 20px;
         animation: fade-in 0.5s ease-in-out;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
-    @keyframes fade-in {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .ai-summary-content h1,
-    .ai-summary-content h2,
-    .ai-summary-content h3 {
-        color: var(--primary-color);
-        margin-bottom: 10px;
-        font-size: 1.1rem;
+    .ai-summary-content h2 {
+        margin-top: 0;
+        color: #20A7C9;
+        font-size: 18px;
         font-weight: 600;
+        margin-bottom: 12px;
+    }
+
+    .ai-summary-content h3 {
+        color: #484848;
+        font-size: 16px;
+        font-weight: 600;
+        margin-top: 16px;
+        margin-bottom: 8px;
     }
 
     .ai-summary-content p {
         margin-bottom: 10px;
     }
 
-    .ai-summary-content strong {
-        color: var(--secondary-color);
-        font-weight: 600;
-    }
-
-    .ai-summary-content ul,
-    .ai-summary-content ol {
+    .ai-summary-content ul {
         padding-left: 20px;
-        margin-bottom: 10px;
+        margin-top: 5px;
+        margin-bottom: 12px;
     }
 
     .ai-summary-content li {
-        margin-bottom: 5px;
+        margin-bottom: 6px;
     }
 
-    /* Typing animation effect */
-    .typing-animation {
-        border-right: 2px solid var(--primary-color);
-        animation: typing 1s steps(30, end) infinite;
-    }
-
+    /* Typing animation for streaming effect */
     @keyframes typing {
-        from { border-color: var(--primary-color); }
-        to { border-color: transparent; }
+        from { width: 0 }
+        to { width: 100% }
+    }
+
+    .typing-cursor {
+        display: inline-block;
+        width: 3px;
+        height: 16px;
+        background-color: #20A7C9;
+        margin-left: 2px;
+        animation: blink 1s step-end infinite;
+        vertical-align: bottom;
+    }
+
+    @keyframes blink {
+        from, to { background-color: transparent }
+        50% { background-color: #20A7C9 }
     }
 
     /* Mobile adjustments */
     @media (max-width: 1024px) {
         .ai-summary-content {
-            padding: 10px;
+            padding: 12px;
         }
+    }
+
+    /* Streaming effect classes */
+    .streaming-text {
+        overflow: hidden;
+        white-space: nowrap;
+        animation: typing 3.5s steps(40, end);
     }
     '''
     return custom_css

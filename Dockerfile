@@ -1,10 +1,32 @@
+# Stage 1: Builder stage for dependencies
+FROM python:3.10-slim as builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for faster pip installs
+RUN pip install --no-cache-dir uv
+
+# Copy only dependency files first
+COPY pyproject.toml .
+
+# Install dependencies into a virtual environment
+RUN python -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+RUN . /app/venv/bin/activate && \
+    pip install --no-cache-dir -e .
+
+# Stage 2: Runtime stage
 FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies including LiteFS requirements
+# Install runtime system dependencies
 RUN apt-get update && apt-get install -y \
-    build-essential \
     curl \
     nginx \
     ca-certificates \
@@ -15,14 +37,15 @@ RUN apt-get update && apt-get install -y \
 # Copy LiteFS binary
 COPY --from=flyio/litefs:0.5 /usr/local/bin/litefs /usr/local/bin/litefs
 
+# Copy virtual environment from builder stage
+COPY --from=builder /app/venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+ENV VIRTUAL_ENV="/app/venv"
+
 # Create directory for data and set permissions
 RUN mkdir -p /app/data && chmod 755 /app/data
 
-# Install uv using pip
-RUN pip install --no-cache-dir uv
-
-# Copy project files and data
-COPY pyproject.toml .
+# Copy application files
 COPY gunicorn.conf.py .
 COPY app.py .
 COPY src /app/src
@@ -36,11 +59,7 @@ RUN ls -la /app/data/data.parquet && \
     chmod 644 /app/data/data.parquet && \
     chmod 644 /app/data/team_groups.db
 
-# Install dependencies using uv and add eventlet
-RUN uv pip install --system . && \
-    pip install --no-cache-dir eventlet
-
-# Create Nginx configuration without basic auth
+# Create Nginx configuration
 RUN echo 'server { \
     listen 80; \
     server_name localhost; \
@@ -70,9 +89,12 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/conf.d/dash.conf
 
-# Create improved entrypoint script with better debugging
+# Create entrypoint script
 RUN echo '#!/bin/bash \n\
 echo "Starting NC Soccer Analytics Dashboard" \n\
+\n\
+# Activate virtual environment \n\
+source /app/venv/bin/activate \n\
 \n\
 # Explicitly set the environment variables needed by the app \n\
 export PARQUET_FILE=${PARQUET_FILE:-"/app/data/data.parquet"} \n\
@@ -84,6 +106,7 @@ echo "- PARQUET_FILE: $PARQUET_FILE" \n\
 echo "- AUTH_FLASK_ROUTES: $AUTH_FLASK_ROUTES" \n\
 echo "- AUTH0_CALLBACK_URL: $AUTH0_CALLBACK_URL" \n\
 echo "- PYTHONPATH: $PYTHONPATH" \n\
+echo "- VIRTUAL_ENV: $VIRTUAL_ENV" \n\
 \n\
 # Create assets directory if it doesn\'t exist \n\
 mkdir -p /app/assets \n\

@@ -35,59 +35,102 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
             style={"display": "block"}  # Initially visible
         ),
 
-        # Top Navigation Bar (Superset style)
+        # Top Navigation Bar
         html.Div([
+            # Main header row
             dbc.Row([
-                # Left side - Title, Star, Published tag and version
+                # Title and star
                 dbc.Col([
                     html.Div([
-                        html.H3("NC Soccer Analytics Dashboard", className="mb-0 d-inline-block"),
-                        html.I(className="fas fa-star text-warning ms-2", style={"font-size": "22px"}),
-                        html.Span("Published", className="ms-2 px-2 py-1",
-                                 style={"background-color": "#F5F5F5",
-                                       "color": "#484848",
-                                       "border-radius": "4px",
-                                       "font-size": "13px",
-                                       "font-weight": "500"}),
-                        html.Span("v1.2.0", className="ms-2",
-                                 style={"color": "#666666",
-                                       "font-size": "13px",
-                                       "font-weight": "500"}),
-                        html.Span("Last updated: Mar 30, 2025", className="ms-2",
-                                 style={"color": "#666666",
-                                       "font-size": "13px"})
-                    ], className="d-flex align-items-center")
-                ], width=9),
-                # Right side - Add logout button
-                dbc.Col([
-                    html.Div([
-                        html.A(
-                            dbc.Button(
-                                [html.I(className="fas fa-sign-out-alt me-2"), "Logout"],
-                                color="link",
-                                className="text-secondary fw-normal px-3 py-1 border-0",
-                                style={
-                                    "fontSize": "14px",
-                                    "backgroundColor": "transparent",
-                                    "boxShadow": "none",
-                                    "transition": "all 0.2s ease",
-                                    "borderRadius": "4px",
-                                }
-                            ),
-                            href="/logout/",
-                            className="text-decoration-none"
-                        )
-                    ], className="d-flex justify-content-end")
-                ], width=3)
-            ], className="align-items-center"),
-        ], className="py-3 px-4 mb-4", style={'background-color': 'white', 'border-bottom': '1px solid #E0E0E0'}),
+                        # Title
+                        html.H3("NC Soccer Analytics Dashboard",
+                               className="mb-0",
+                               style={"font-size": "20px", "font-weight": "600"}),
+                        # Star (hidden on mobile)
+                        html.I(className="fas fa-star text-warning ms-2 d-none d-md-inline",
+                              style={"font-size": "20px"}),
+                        # Hamburger menu button (visible only on mobile)
+                        html.Button(
+                            html.I(className="fas fa-bars"),
+                            id="mobile-menu-button",
+                            className="d-md-none ms-2 btn btn-link text-dark",
+                            style={"border": "none", "padding": "0"}
+                        ),
+                    ], className="d-flex align-items-center justify-content-between"),
+                ], xs=12),
+            ], className="mb-0"),
+
+            # Mobile menu (collapsed by default)
+            html.Div([
+                # Version info
+                html.Div([
+                    html.Span("Published",
+                             className="px-2 py-1 me-2",
+                             style={"background-color": "#F5F5F5",
+                                   "color": "#484848",
+                                   "border-radius": "4px",
+                                   "font-size": "12px",
+                                   "font-weight": "500"}),
+                    html.Span("v1.2.0",
+                             style={"color": "#666666",
+                                   "font-size": "12px",
+                                   "font-weight": "500"}),
+                ], className="mb-2"),
+                # Logout button
+                html.A(
+                    dbc.Button(
+                        [html.I(className="fas fa-sign-out-alt me-2"), "Logout"],
+                        color="link",
+                        className="text-secondary fw-normal p-0",
+                        style={"fontSize": "14px"}
+                    ),
+                    href="/logout/",
+                    className="text-decoration-none"
+                )
+            ], id="mobile-menu", className="d-md-none", style={"display": "none"}),
+
+            # Desktop version info and logout (hidden on mobile)
+            html.Div([
+                dbc.Row([
+                    dbc.Col([
+                        html.Div([
+                            html.Span("Published",
+                                     className="px-2 py-1 me-2",
+                                     style={"background-color": "#F5F5F5",
+                                           "color": "#484848",
+                                           "border-radius": "4px",
+                                           "font-size": "12px",
+                                           "font-weight": "500"}),
+                            html.Span("v1.2.0",
+                                     style={"color": "#666666",
+                                           "font-size": "12px",
+                                           "font-weight": "500"}),
+                        ])
+                    ], width=6),
+                    dbc.Col([
+                        html.Div([
+                            html.A(
+                                dbc.Button(
+                                    [html.I(className="fas fa-sign-out-alt me-2"), "Logout"],
+                                    color="link",
+                                    className="text-secondary fw-normal p-0",
+                                    style={"fontSize": "14px"}
+                                ),
+                                href="/logout/",
+                                className="text-decoration-none"
+                            )
+                        ], className="d-flex justify-content-end")
+                    ], width=6)
+                ])
+            ], className="d-none d-md-block mt-2")
+        ], className="py-3 px-3 mb-4", style={'background-color': 'white', 'border-bottom': '1px solid #E0E0E0'}),
 
         # Main content in two columns
         dbc.Row([
             # Left sidebar with filters
             dbc.Col([
                 html.Div([
-                    html.H4("Filters", className="mb-4", style={'color': '#20A7C9'}),
+                    html.H4("Filters", className="mb-4", style={'color': '#20A7C9', 'font-size': 'calc(1.1rem + 0.3vw)'}),
 
                     html.Label("Team Selection Type:", className="fw-bold mb-2"),
                     dcc.RadioItems(
@@ -301,7 +344,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                             "Select filters above to analyze team performance data."
                         ], className="small text-muted mb-0")
                     ])
-                ], className="filter-panel"),
+                ], className="filter-panel p-3 p-md-4"),  # Add responsive padding
             ], xs=12, md=4, lg=3, className="filter-sidebar mb-4"),
 
             # Main content area

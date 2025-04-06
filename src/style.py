@@ -141,18 +141,23 @@ def init_style():
     .filter-panel {
         background-color: var(--card-bg);
         border-radius: 4px;
-        padding: 16px;
+        padding: 20px;
         box-shadow: 0 1px 3px var(--shadow-color);
         border: 1px solid var(--border-color);
     }
 
     /* Dropdown styling */
+    .Select {
+        position: relative;
+    }
+
     .Select-control {
         border-radius: 4px !important;
         border: 1px solid var(--border-color) !important;
         font-size: 14px !important;
         height: auto !important;
         min-height: 36px !important;
+        background-color: var(--white) !important;
     }
 
     .Select-control:hover {
@@ -165,23 +170,50 @@ def init_style():
     }
 
     .Select-menu-outer {
-        border-radius: 0 0 4px 4px !important;
+        background-color: var(--white) !important;
         border: 1px solid var(--border-color) !important;
-        box-shadow: 0 2px 4px var(--shadow-color) !important;
-        font-size: 14px !important;
-        max-width: none !important;
-        width: auto !important;
-        min-width: 100% !important;
-    }
-
-    .Select-menu {
+        border-radius: 4px !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
         max-height: 300px !important;
+        overflow-y: auto !important;
     }
 
     .Select-option {
-        white-space: normal !important;
-        word-wrap: break-word !important;
-        padding: 8px 10px !important;
+        padding: 8px 12px !important;
+        cursor: pointer !important;
+        background-color: var(--white) !important;
+        color: var(--neutral-dark) !important;
+    }
+
+    .Select-option:active,
+    .Select-option.is-focused {
+        background-color: var(--primary-light) !important;
+        color: var(--white) !important;
+    }
+
+    /* Mobile-specific styles */
+    @media (max-width: 768px) {
+        .Select-option {
+            padding: 12px !important;
+            font-size: 16px !important;
+        }
+
+        .Select-control {
+            min-height: 44px !important;
+        }
+    }
+
+    /* Fix for iOS scrolling */
+    .Select-menu {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Ensure proper stacking context */
+    #opponent-selection-div,
+    #team-group-selection-div,
+    #opponent-team-groups {
+        position: relative !important;
+        z-index: 1000 !important;
     }
 
     /* Multi-select dropdown styling */
@@ -217,79 +249,136 @@ def init_style():
         max-width: 100% !important;
     }
 
-    /* Date picker styling */
-    .DateInput_input {
-        border-radius: 4px !important;
-        font-size: 14px !important;
-        color: var(--neutral-dark) !important;
-        height: 36px !important;
+    /* Date picker base styles */
+    .DateRangePicker {
+        width: 100% !important;
     }
 
     .DateRangePickerInput {
-        border-radius: 4px !important;
+        background-color: var(--white) !important;
         border: 1px solid var(--border-color) !important;
-        height: 36px !important;
+        border-radius: 4px !important;
+        display: flex !important;
+        align-items: center !important;
+        padding: 4px !important;
     }
 
-    .CalendarDay__selected,
-    .CalendarDay__selected:hover {
+    .DateInput {
+        background: var(--white) !important;
+        width: calc(50% - 20px) !important;
+    }
+
+    .DateInput_input {
+        background-color: var(--white) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 4px !important;
+        color: var(--neutral-dark) !important;
+        font-size: 16px !important;
+        padding: 8px !important;
+        width: 100% !important;
+    }
+
+    .DateRangePickerInput_arrow {
+        padding: 0 8px !important;
+    }
+
+    /* Calendar popup container */
+    .DateRangePicker_picker {
+        background-color: var(--white) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 4px !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15) !important;
+        margin-top: 8px !important;
+        z-index: 2000 !important;
+    }
+
+    /* Calendar month grid */
+    .CalendarMonthGrid {
+        background-color: var(--white) !important;
+    }
+
+    .CalendarMonth {
+        background-color: var(--white) !important;
+    }
+
+    .CalendarMonth_caption {
+        padding-bottom: 52px !important;
+        color: var(--neutral-dark) !important;
+    }
+
+    /* Calendar days */
+    .CalendarDay {
+        background: var(--white) !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--neutral-dark) !important;
+        font-size: 14px !important;
+    }
+
+    .CalendarDay__selected {
         background: var(--primary) !important;
-        border: 1px double var(--primary) !important;
+        border: 1px solid var(--primary) !important;
+        color: var(--white) !important;
     }
 
     .CalendarDay__selected_span {
         background: var(--primary-light) !important;
-        border: 1px double var(--primary-light) !important;
+        border: 1px solid var(--primary-light) !important;
         color: var(--white) !important;
     }
 
-    /* Fix for date picker overlapping issues */
-    .DayPicker {
-        z-index: 1500 !important;
-        background-color: white !important;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2) !important;
+    .CalendarDay__hovered_span {
+        background: var(--primary-light) !important;
+        border: 1px solid var(--primary-light) !important;
+        color: var(--white) !important;
     }
 
-    .DayPicker_focusRegion,
-    .DayPicker_focusRegion_1 {
-        background-color: white !important;
-        z-index: 1500 !important;
+    /* Navigation buttons */
+    .DayPickerNavigation_button {
+        border: 1px solid var(--border-color) !important;
+        background: var(--white) !important;
+        color: var(--neutral-dark) !important;
     }
 
-    .CalendarMonth {
-        background-color: white !important;
-    }
+    /* Mobile specific styles */
+    @media (max-width: 1024px) {
+        .DateRangePicker_picker {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            margin: 0 !important;
+            max-width: 95vw !important;
+            width: 375px !important;
+        }
 
-    .DayPicker_transitionContainer {
-        background-color: white !important;
-    }
+        .DateRangePickerInput {
+            min-height: 44px !important;
+        }
 
-    .DayPickerNavigation {
-        z-index: 1501 !important;
-    }
+        .DateInput_input {
+            height: 44px !important;
+            font-size: 16px !important;
+        }
 
-    .DayPicker_portal {
-        z-index: 1502 !important;
-        background-color: rgba(255, 255, 255, 0.95) !important;
-    }
+        .CalendarDay {
+            min-width: 39px !important;
+            height: 39px !important;
+            line-height: 39px !important;
+        }
 
-    /* Additional fixes for date picker */
-    .CalendarMonthGrid {
-        background-color: white !important;
-    }
-
-    .DateRangePicker_picker {
-        background-color: white !important;
-        z-index: 1500 !important;
-    }
-
-    .SingleDatePicker_picker {
-        background-color: white !important;
-        z-index: 1500 !important;
-    }
-
-    .CalendarMonth_table {
-        background-color: white !important;
+        /* Ensure the calendar popup is above everything */
+        .DayPicker_portal {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background-color: rgba(0, 0, 0, 0.5) !important;
+            z-index: 2000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
     }
 
     /* Button styling */
@@ -332,6 +421,33 @@ def init_style():
 
         .summary-value {
             font-size: 1.8rem;
+        }
+
+        .filter-panel {
+            padding: 16px;
+        }
+
+        .filter-panel .form-label {
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .filter-panel .mb-2 {
+            margin-bottom: 1rem !important;
+        }
+
+        .filter-panel .mb-4 {
+            margin-bottom: 1.5rem !important;
+        }
+
+        /* Increase touch target size for radio buttons */
+        .filter-panel .form-check {
+            padding: 12px 0;
+        }
+
+        /* Make dropdowns more touch-friendly */
+        .filter-panel .Select-control {
+            min-height: 44px !important;
         }
     }
 
@@ -406,6 +522,32 @@ def init_style():
     /* Fix for dropdown height to show full text */
     .Select.has-value.Select--multi .Select-input {
         margin-top: 3px !important;
+    }
+
+    /* Mobile menu styles */
+    #mobile-menu {
+        padding-top: 1rem;
+        margin-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    #mobile-menu-button {
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 20px;
+        color: var(--secondary);
+        cursor: pointer;
+    }
+
+    #mobile-menu-button:hover {
+        color: var(--primary);
+    }
+
+    @media (max-width: 768px) {
+        .navbar-brand {
+            font-size: 18px;
+        }
     }
     '''
     return custom_css

@@ -957,10 +957,9 @@ def init_callbacks(app, teams, team_groups_param, conn):
         else:  # 'all' or any other value
             return {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, "Select Opponent(s):", multi_select_style
 
-    # Callback to update opponent dropdown options based on filter type
     @app.callback(
         [Output('opponent-selection', 'options'),
-        Output('opponent-selection', 'value')],  # Add this output to control the selection
+         Output('opponent-selection', 'value')],
         [
             Input('opponent-filter-type', 'value'),
             Input('team-dropdown', 'value'),
@@ -969,9 +968,10 @@ def init_callbacks(app, teams, team_groups_param, conn):
             Input('date-range', 'start_date'),
             Input('date-range', 'end_date'),
             Input('competitiveness-threshold', 'value')
-        ]
+        ],
+        [State('opponent-selection', 'value')]  # Add this to preserve current selection
     )
-    def update_opponent_options(filter_type, team, team_group, selection_type, start_date, end_date, competitiveness_threshold):
+    def update_opponent_options(filter_type, team, team_group, selection_type, start_date, end_date, competitiveness_threshold, current_selection):
         # Default opponents (all teams except selected team/group)
         if selection_type == 'individual':
             all_opponents = [{'label': t, 'value': t} for t in teams if t != team]
@@ -983,8 +983,18 @@ def init_callbacks(app, teams, team_groups_param, conn):
                 return [], []  # Empty group
             all_opponents = [{'label': t, 'value': t} for t in teams if t not in group_teams]
 
+        # For 'specific' option, return all opponents and preserve current selection
+        if filter_type == 'specific':
+            # Ensure current_selection is a list
+            if current_selection and not isinstance(current_selection, list):
+                current_selection = [current_selection]
+            # Filter out any invalid selections
+            valid_values = [opt['value'] for opt in all_opponents]
+            current_selection = [v for v in (current_selection or []) if v in valid_values]
+            return all_opponents, current_selection
+
         # If filter type is 'worthy', compute worthy opponents
-        if filter_type == 'worthy':
+        elif filter_type == 'worthy':
             if not start_date:
                 start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
             if not end_date:
@@ -1007,8 +1017,6 @@ def init_callbacks(app, teams, team_groups_param, conn):
 
             # Execute query and get opponent data
             opponent_df = conn.execute(opponent_query).fetchdf()
-            print(f"Debug: Raw opponent data: {opponent_df.head()}")
-            print(f"Debug: Opponent columns: {opponent_df.columns}")
 
             # Rename 'opponent' column to 'opponent_team' for consistency
             if 'opponent' in opponent_df.columns and 'opponent_team' not in opponent_df.columns:
@@ -1016,10 +1024,10 @@ def init_callbacks(app, teams, team_groups_param, conn):
 
             # Calculate competitiveness for each opponent
             worthy_opponents = []
-            worthy_opponent_values = []  # To store just the values for selection
-            opponents_with_wins = set()  # Track opponents who have defeated us
+            worthy_opponent_values = []
+            opponents_with_wins = set()
 
-            # Special handling - Any team with "Key West" in the name should be considered worthy
+            # Special handling for Key West teams
             key_west_teams = []
             for team_name in opponent_df['opponent_team'].unique():
                 if 'key west' in str(team_name).lower():
@@ -1035,27 +1043,21 @@ def init_callbacks(app, teams, team_groups_param, conn):
                 for norm_name, group in opponent_groups:
                     name_mapping[norm_name] = group['opponent_team'].iloc[0]
 
-                # First identify opponents who have defeated us (these are automatic worthy adversaries)
+                # First identify opponents who have defeated us
                 for norm_opponent, group in opponent_groups:
-                    # Use the original name for display
                     display_name = name_mapping[norm_opponent]
-
-                    # Count games where the opponent won (we lost)
                     opponent_wins = len(group[group['result'] == 'Loss'])
                     total_matches = len(group)
 
                     if opponent_wins > 0:
                         opponents_with_wins.add(norm_opponent)
-
-                        # Add this opponent to worthy opponents list
                         worthy_opponents.append({
                             'label': f"{display_name} ({total_matches} matches, defeated us {opponent_wins} times)",
                             'value': display_name
                         })
                         worthy_opponent_values.append(display_name)
-                        print(f"Debug: Auto-including opponent {display_name} who defeated us {opponent_wins} times")
 
-                # Add all Key West teams as worthy opponents
+                # Add Key West teams as worthy opponents
                 for team_name in set(key_west_teams):
                     if team_name not in worthy_opponent_values:
                         worthy_opponents.append({
@@ -1063,65 +1065,49 @@ def init_callbacks(app, teams, team_groups_param, conn):
                             'value': team_name
                         })
                         worthy_opponent_values.append(team_name)
-                        print(f"Debug: Adding Key West team as worthy opponent: {team_name}")
 
-                # Then evaluate other opponents based on competitiveness
+                # Evaluate other opponents based on competitiveness
                 for norm_opponent, group in opponent_groups:
-                    # Skip opponents who already defeated us (already added)
                     if norm_opponent in opponents_with_wins:
                         continue
 
-                    # Skip Key West teams (already added above)
                     display_name = name_mapping[norm_opponent]
                     if display_name in worthy_opponent_values:
                         continue
 
-                    if len(group) >= 1:  # Reduced minimum match threshold to 1
-                        # Calculate results against this opponent
+                    if len(group) >= 1:
                         total_matches = len(group)
                         losses = len(group[group['result'] == 'Loss'])
                         loss_rate = losses / total_matches
 
-                        # Calculate average goal differential (absolute value)
                         group['goal_diff'] = abs(group['team_score'] - group['opponent_score'])
                         avg_goal_diff = group['goal_diff'].mean()
 
-                        # Competitiveness calculation:
-                        loss_factor = loss_rate * 100  # 0-100 based on loss percentage
-                        margin_factor = max(0, 100 - min(avg_goal_diff * 20, 100))  # 0-100 based on goal margin
+                        loss_factor = loss_rate * 100
+                        margin_factor = max(0, 100 - min(avg_goal_diff * 20, 100))
                         competitiveness_score = (loss_factor * 0.7) + (margin_factor * 0.3)
 
-                        print(f"Debug: Evaluating opponent: {display_name}, Score: {competitiveness_score:.2f}, Threshold: {competitiveness_threshold}")
-
-                        # Threshold now works as: higher threshold = more challenging opponents
                         if competitiveness_score >= competitiveness_threshold:
                             worthy_opponents.append({
                                 'label': f"{display_name} ({total_matches} matches, {competitiveness_score:.0f}% competitive)",
                                 'value': display_name
                             })
                             worthy_opponent_values.append(display_name)
-                            print(f"Debug: Added worthy opponent {display_name} with score {competitiveness_score:.0f}%")
 
-                # Sort by competitiveness (most competitive first)
                 worthy_opponents = sorted(worthy_opponents, key=lambda x: x['label'])
 
                 if worthy_opponents:
-                    # Return all worthy opponents' options and all values already selected
-                    # Ensure worthy_opponent_values is a proper list for multi-select
-                    if not isinstance(worthy_opponent_values, list):
-                        worthy_opponent_values = [worthy_opponent_values] if worthy_opponent_values else []
-
-                    print(f"Debug: Found {len(worthy_opponents)} worthy opponents, returning {len(worthy_opponent_values)} values: {worthy_opponent_values}")
-                    return worthy_opponents, worthy_opponent_values
+                    # Ensure current_selection contains only valid worthy opponents
+                    if current_selection and not isinstance(current_selection, list):
+                        current_selection = [current_selection]
+                    valid_values = [opt['value'] for opt in worthy_opponents]
+                    current_selection = [v for v in (current_selection or []) if v in valid_values]
+                    return worthy_opponents, current_selection
                 else:
                     return [{'label': 'No worthy opponents found with current threshold', 'value': ''}], []
 
-        # For 'specific' option, return all opponents
-        elif filter_type == 'specific':
-            return all_opponents, []  # Empty selection for specific filter
-
-        # Default: return empty when 'all' is selected (not needed to select specific opponents)
-        return [], []  # Empty options and selection for 'all'
+        # Default: return empty when 'all' is selected
+        return [], []
 
     # Add callback to hide loading spinner after initial load
     @app.callback(
@@ -1409,3 +1395,17 @@ def init_callbacks(app, teams, team_groups_param, conn):
 
         # Otherwise, just return the current selection unchanged
         return current_selection
+
+    # Mobile menu toggle callback
+    @app.callback(
+        Output("mobile-menu", "style"),
+        Input("mobile-menu-button", "n_clicks"),
+        State("mobile-menu", "style"),
+        prevent_initial_call=True
+    )
+    def toggle_mobile_menu(n_clicks, current_style):
+        if current_style is None:
+            current_style = {}
+        if current_style.get("display") == "none":
+            return {"display": "block"}
+        return {"display": "none"}

@@ -64,19 +64,25 @@ jobs:
 
       - name: Install Flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Check if LiteFS volume exists
         id: check_volume
         run: |
-          if ! fly volumes list --app ${{ env.FLY_APP }} | grep -q "litefs"; then
+          if ! flyctl volumes list --app ${{ env.FLY_APP }} | grep -q "litefs"; then
             echo "volume_exists=false" >> $GITHUB_OUTPUT
           else
             echo "volume_exists=true" >> $GITHUB_OUTPUT
           fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Create LiteFS volume if not exists
         if: steps.check_volume.outputs.volume_exists == 'false'
-        run: fly volume create litefs -r iad -n 1 --app ${{ env.FLY_APP }}
+        run: flyctl volume create litefs -r iad -n 1 --app ${{ env.FLY_APP }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy to Fly.io
         run: flyctl deploy --remote-only

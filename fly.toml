@@ -47,7 +47,7 @@ primary_region = "iad"  # virginia region
 
 [deploy]
   strategy = "immediate"
-  release_command = "python -m venv /app/venv && . /app/venv/bin/activate && pip install --no-cache-dir -e ."
+  release_command = "pip install -e ."
 
 # Health check configuration
 [metrics]

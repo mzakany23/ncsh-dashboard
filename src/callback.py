@@ -1440,12 +1440,19 @@ def init_callbacks(app, teams, team_groups_param, conn):
         prevent_initial_call=True
     )
     def start_spinning_icon(n_clicks):
-        """Make the icon start spinning immediately when clicked"""
+        """Replace the robot icon with a spinner when clicked"""
         if not n_clicks:
             return no_update
 
-        # Start spinning immediately
-        return html.I(className="fas fa-robot ai-icon ai-icon-spinning")
+        # Replace with a spinner icon
+        return html.I(className="fas fa-spinner fa-spin", style={
+            "color": "#20A7C9",
+            "font-size": "1.25rem",
+            "padding": "6px",
+            "background-color": "rgba(32, 167, 201, 0.1)",
+            "border-radius": "50%",
+            "box-shadow": "0 0 5px rgba(32, 167, 201, 0.2)"
+        })
 
     # AI summary generation callback
     @app.callback(

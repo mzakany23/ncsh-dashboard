@@ -99,12 +99,31 @@ def init_style():
 
     /* Section headers */
     .section-header {
-        color: var(--secondary);
+        margin-bottom: 0.75rem;
+        color: #20A7C9;
         font-weight: 600;
-        margin-top: 24px;
-        margin-bottom: 12px;
-        padding-bottom: 4px;
-        border-bottom: 1px solid var(--border-color);
+        position: relative;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #F5F5F5;
+        width: 100%;
+    }
+
+    .section-header-container {
+        position: relative;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        border-bottom: 2px solid #F5F5F5;
+        padding-bottom: 0.5rem;
+    }
+
+    /* Make sure HR tags extend fully */
+    hr {
+        width: 100%;
+        margin: 1rem 0;
+        border: none;
+        border-top: 2px solid #F5F5F5;
     }
 
     /* Table Styles */

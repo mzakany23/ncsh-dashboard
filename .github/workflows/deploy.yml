@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'CHANGELOG.md'
 
 env:
   FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -16,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_deploy: ${{ steps.check_version.outputs.changed }}
+      new_version: ${{ steps.check_version.outputs.version }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -24,12 +23,20 @@ jobs:
       - name: Check if version changed
         id: check_version
         run: |
-          if git diff HEAD^ HEAD -- CHANGELOG.md | grep -q '^\+## \['; then
-            echo "Version change detected in CHANGELOG.md"
+          # Get the latest version from current CHANGELOG
+          NEW_VERSION=$(grep -m 1 "## \[" CHANGELOG.md | sed 's/## \[\(.*\)\].*/\1/')
+
+          # Get the previous version by checking the previous commit
+          OLD_VERSION=$(git show HEAD^:CHANGELOG.md | grep -m 1 "## \[" | sed 's/## \[\(.*\)\].*/\1/' || echo "none")
+
+          if [ "$NEW_VERSION" != "$OLD_VERSION" ]; then
+            echo "New version detected: $NEW_VERSION (was: $OLD_VERSION)"
             echo "changed=true" >> $GITHUB_OUTPUT
+            echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           else
-            echo "No version change in CHANGELOG.md"
+            echo "No version change detected"
             echo "changed=false" >> $GITHUB_OUTPUT
+            echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           fi
 
   deploy:
@@ -60,3 +67,8 @@ jobs:
         run: flyctl consul attach
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Create deployment tag
+        run: |
+          git tag -a "v${{ needs.verify_version.outputs.new_version }}" -m "Release ${{ needs.verify_version.outputs.new_version }}"
+          git push origin "v${{ needs.verify_version.outputs.new_version }}"

@@ -9,11 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - AI-powered analysis feature using Claude API
-- Generate button to create on-demand summaries and insights
+- Intuitive AI analysis icon with hover tooltip
+- Integrated AI summaries directly in the performance summary section
 - Markdown rendering of AI analysis with styled output
+- Typing animation effect for AI-generated content
+
+### Changed
+- Improved UI by using an icon instead of a separate section
+- Enhanced styling for AI-generated content
+- Streamlined user experience for generating insights
 
 ### Fixed
 - Deployment configuration for Fly.io
+- NA score handling in match results
 
 ## [1.0.0] - 2024-03-21
 
@@ -30,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Date range picker styling issues on mobile devices
-- NA score handling in match results
 - Team group selection and filtering edge cases
 - Mobile layout and spacing inconsistencies
 - Z-index conflicts in overlapping components

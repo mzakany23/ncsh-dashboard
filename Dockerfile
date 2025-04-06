@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     fuse3 \
     sqlite3 \
-    awscli \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy LiteFS binary
@@ -22,12 +21,14 @@ RUN mkdir -p /app/data
 # Install uv using pip
 RUN pip install --no-cache-dir uv
 
-# Copy project files
+# Copy project files and data
 COPY pyproject.toml .
 COPY gunicorn.conf.py .
 COPY app.py .
 COPY src /app/src
 COPY litefs.yml /etc/litefs.yml
+COPY data/data.parquet /app/data/data.parquet
+COPY data/team_groups.db /app/data/team_groups.db
 
 # Install dependencies using uv and add eventlet
 RUN uv pip install --system . && \
@@ -77,27 +78,6 @@ echo "- PARQUET_FILE: $PARQUET_FILE" \n\
 echo "- AUTH_FLASK_ROUTES: $AUTH_FLASK_ROUTES" \n\
 echo "- AUTH0_CALLBACK_URL: $AUTH0_CALLBACK_URL" \n\
 echo "- PYTHONPATH: $PYTHONPATH" \n\
-\n\
-# Only download from S3 if S3_BUCKET is set \n\
-if [ ! -z "$S3_BUCKET" ]; then \n\
-    echo "S3_BUCKET is set, downloading files from S3..." \n\
-    # Download parquet file from S3 \n\
-    echo "Downloading parquet file from S3..." \n\
-    aws s3 cp s3://${S3_BUCKET}/v2/processed/parquet/data.parquet ${PARQUET_FILE} || exit 1 \n\
-\n\
-    # Download team_groups.db from S3 if it doesn\'t exist \n\
-    if [ ! -f "/app/data/team_groups.db" ]; then \n\
-        echo "Downloading team_groups.db from S3..." \n\
-        aws s3 cp s3://${S3_BUCKET}/v2/processed/sqlite/team_groups.db /app/data/team_groups.db || exit 1 \n\
-    fi \n\
-else \n\
-    echo "S3_BUCKET not set, using local files..." \n\
-    # Check if local files exist \n\
-    if [ ! -f "$PARQUET_FILE" ]; then \n\
-        echo "ERROR: Parquet file not found at $PARQUET_FILE" \n\
-        exit 1 \n\
-    fi \n\
-fi \n\
 \n\
 # Create assets directory if it doesn\'t exist \n\
 mkdir -p /app/assets \n\

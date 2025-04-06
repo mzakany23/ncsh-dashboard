@@ -64,6 +64,12 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           AWS_REGION: us-east-2
 
+      - name: Download data files
+        run: |
+          mkdir -p data
+          aws s3 cp s3://${{ env.S3_BUCKET }}/v2/processed/parquet/data.parquet data/data.parquet
+          aws s3 cp s3://${{ env.S3_BUCKET }}/v2/processed/sqlite/team_groups.db data/team_groups.db
+
       - name: Install Flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
         env:
@@ -98,14 +104,23 @@ jobs:
           rm -f ~/.aws/config
 
       - name: Configure Consul
-        run: flyctl consul attach
+        run: |
+          # Get the primary region
+          PRIMARY_REGION=$(flyctl status --app ${{ env.FLY_APP }} --json | jq -r '.PrimaryRegion')
+
+          # Get the Consul URL
+          CONSUL_URL=$(flyctl secrets list --app ${{ env.FLY_APP }} --json | jq -r '.[] | select(.Name == "FLY_CONSUL_URL") | .Digest')
+
+          # If Consul URL is not set, set it
+          if [ -z "$CONSUL_URL" ]; then
+            flyctl secrets set FLY_CONSUL_URL="http://${PRIMARY_REGION}.${FLY_APP}.internal:8500" --app ${{ env.FLY_APP }}
+          fi
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Create git tag
-        if: success()
+      - name: Create and push git tag
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag ${{ needs.verify_version.outputs.new_version }}
-          git push origin ${{ needs.verify_version.outputs.new_version }}
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a v${{ needs.verify_version.outputs.new_version }} -m "Release v${{ needs.verify_version.outputs.new_version }}"
+          git push origin v${{ needs.verify_version.outputs.new_version }}

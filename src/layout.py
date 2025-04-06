@@ -588,10 +588,6 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                         html.Hr(),
                         html.Div([
                             html.Span("NC Soccer Hudson Analytics Dashboard", className="text-muted me-2"),
-                            html.Span("•", className="text-muted mx-2"),
-                            html.Span("Designed with ", className="text-muted"),
-                            html.I(className="fas fa-heart text-danger mx-1"),
-                            html.Span(" by NC Soccer Team", className="text-muted")
                         ], className="text-center py-3")
                     ], width=12)
                 ], className="mt-4")

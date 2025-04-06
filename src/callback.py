@@ -1421,14 +1421,27 @@ def init_callbacks(app, teams, team_groups_param, conn):
             return {"display": "block"}
         return {"display": "none"}
 
+    # Tooltip positioning callback for AI icon
+    @app.callback(
+        [Output("ai-tooltip", "show"),
+         Output("ai-tooltip", "bbox")],
+        [Input("ai-summary-icon", "n_hover")],
+        prevent_initial_call=True
+    )
+    def show_tooltip(hover_data):
+        if hover_data:
+            return True, {"bottom": 0, "height": 20, "left": 0, "right": 20, "top": 20, "width": 20, "x": 10, "y": 10}
+        return False, {}
+
+    # AI summary generation callback
     @app.callback(
         [Output('ai-summary-container', 'children'),
          Output('ai-summary-container', 'style')],
         [Input('ai-summary-icon', 'n_clicks')],
         [State('team-dropdown', 'value'),
-         State('date-range-picker', 'start_date'),
-         State('date-range-picker', 'end_date'),
-         State('opponent-dropdown', 'value'),
+         State('date-range', 'start_date'),
+         State('date-range', 'end_date'),
+         State('opponent-filter-type', 'value'),
          State('games-played', 'children'),
          State('win-rate', 'children'),
          State('loss-rate-display', 'children'),
@@ -1445,13 +1458,16 @@ def init_callbacks(app, teams, team_groups_param, conn):
         if not n_clicks:
             return no_update, no_update
 
+        # Display loading message
+        loading_message = html.Div([
+            html.P("Analyzing data with AI...", className="typing-animation")
+        ])
+
+        ctx = callback_context
+        print(f"AI summary triggered, n_clicks: {n_clicks}, team: {team}")
+
         if not team:
             return html.Div("Please select a team to analyze."), {'display': 'block'}
-
-        # Initially show a loading message with typing animation
-        initial_message = html.Div([
-            html.P("Analyzing your data with AI...", className="typing-animation")
-        ])
 
         # Convert match data to DataFrame
         match_df = pd.DataFrame(match_data) if match_data else pd.DataFrame()
@@ -1466,20 +1482,28 @@ def init_callbacks(app, teams, team_groups_param, conn):
             "goal_diff": goal_diff
         }
 
-        # Format the date range
-        date_range = [
-            start_date or "All time",
-            end_date or datetime.now().strftime("%Y-%m-%d")
-        ]
+        try:
+            # Format the date range
+            date_range = [
+                start_date or "All time",
+                end_date or datetime.now().strftime("%Y-%m-%d")
+            ]
 
-        # Generate the summary using Claude
-        summary_markdown = generate_summary(
-            selected_team=team,
-            date_range=date_range,
-            opponent_filter=opponent_filter or "All opponents",
-            metrics=metrics,
-            match_data=match_df
-        )
+            # Generate the summary using Claude
+            print("Calling Claude API for summary generation...")
+            summary_markdown = generate_summary(
+                selected_team=team,
+                date_range=date_range,
+                opponent_filter=opponent_filter or "All opponents",
+                metrics=metrics,
+                match_data=match_df
+            )
 
-        # Return the markdown content
-        return dcc.Markdown(summary_markdown), {'display': 'block'}
+            # Return the markdown content
+            return dcc.Markdown(summary_markdown), {'display': 'block'}
+        except Exception as e:
+            print(f"Error generating AI summary: {str(e)}")
+            return html.Div([
+                html.P("Error generating AI analysis:"),
+                html.Pre(str(e), style={"color": "red"})
+            ]), {'display': 'block'}

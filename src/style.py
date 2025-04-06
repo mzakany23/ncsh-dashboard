@@ -636,24 +636,42 @@ def init_style():
     .section-header-container {
         position: relative;
         margin-bottom: 15px;
+        display: flex;
+        align-items: center;
     }
 
     .ai-icon-container {
-        margin-left: 10px;
+        margin-left: 12px;
         display: inline-flex;
         align-items: center;
     }
 
-    .ai-icon {
-        color: var(--primary-color);
-        font-size: 1.2rem;
+    .btn-icon {
+        background: none;
+        border: none;
+        padding: 0;
         cursor: pointer;
-        transition: transform 0.2s, color 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ai-icon {
+        color: #20A7C9;
+        font-size: 1.4rem;
+        cursor: pointer;
+        transition: transform 0.3s, color 0.3s;
+        padding: 5px;
+        background-color: rgba(32, 167, 201, 0.1);
+        border-radius: 50%;
+        box-shadow: 0 0 5px rgba(32, 167, 201, 0.2);
     }
 
     .ai-icon:hover {
-        color: var(--secondary-color);
-        transform: scale(1.1);
+        color: #147a95;
+        transform: scale(1.15);
+        background-color: rgba(32, 167, 201, 0.2);
+        box-shadow: 0 0 8px rgba(32, 167, 201, 0.4);
     }
 
     /* AI Summary Content */

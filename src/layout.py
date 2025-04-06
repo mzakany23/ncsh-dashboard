@@ -350,7 +350,33 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
             # Main content area
             dbc.Col([
                 # Summary statistics cards in a single row at the top of the story
-                html.H4("Performance Summary", className="section-header"),
+                html.Div([
+                    html.H4("Performance Summary", className="section-header"),
+                    html.Div([
+                        html.Button([
+                            html.I(className="fas fa-robot ai-icon")
+                        ], id="ai-summary-icon",
+                           className="btn-icon",
+                           title="Generate AI analysis"),
+                        dcc.Tooltip(
+                            id="ai-tooltip",
+                            children=["Click to generate AI insights"],
+                            style={
+                                "backgroundColor": "rgba(32, 167, 201, 0.9)",
+                                "color": "white",
+                                "borderRadius": "4px",
+                                "padding": "8px 12px",
+                                "fontSize": "14px",
+                                "fontWeight": "500",
+                                "boxShadow": "0 2px 8px rgba(0,0,0,0.15)"
+                            }
+                        )
+                    ], className="ai-icon-container")
+                ], className="section-header-container d-flex align-items-center"),
+
+                # Container for AI summary
+                html.Div(id='ai-summary-container', className='ai-summary-content mb-3', style={'display': 'none'}),
+
                 dcc.Loading(
                     id="loading-performance-metrics",
                     type="circle",

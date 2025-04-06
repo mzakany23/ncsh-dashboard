@@ -17,6 +17,7 @@ services:
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - APP_SECRET_KEY=${APP_SECRET_KEY}
       - AUTH_FLASK_ROUTES=${AUTH_FLASK_ROUTES:-true}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8050/"]
@@ -41,6 +42,7 @@ services:
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - APP_SECRET_KEY=${APP_SECRET_KEY}
       - AUTH_FLASK_ROUTES=${AUTH_FLASK_ROUTES:-true}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8050/"]

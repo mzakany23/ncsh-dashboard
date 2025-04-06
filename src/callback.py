@@ -21,6 +21,11 @@ from src.util import (
     filter_matches_by_opponents,
     identify_worthy_opponents
 )
+from dash import callback, html, dcc, no_update
+import dash
+from src.claude_summary import generate_summary
+import json
+import time
 
 
 def init_callbacks(app, teams, team_groups_param, conn):
@@ -1415,3 +1420,140 @@ def init_callbacks(app, teams, team_groups_param, conn):
         if current_style.get("display") == "none":
             return {"display": "block"}
         return {"display": "none"}
+
+    # Tooltip positioning callback for AI icon
+    @app.callback(
+        [Output("ai-tooltip", "show"),
+         Output("ai-tooltip", "bbox")],
+        [Input("ai-summary-icon", "n_hover")],
+        prevent_initial_call=True
+    )
+    def show_tooltip(hover_data):
+        if hover_data:
+            return True, {"bottom": 0, "height": 20, "left": 0, "right": 20, "top": 20, "width": 20, "x": 10, "y": 10}
+        return False, {}
+
+    # Immediately trigger spinning animation when icon is clicked
+    @app.callback(
+        Output('ai-summary-icon', 'children', allow_duplicate=True),
+        Input('ai-summary-icon', 'n_clicks'),
+        prevent_initial_call=True
+    )
+    def start_spinning_icon(n_clicks):
+        """Replace the robot icon with a spinner when clicked"""
+        if not n_clicks:
+            return no_update
+
+        # Replace with a spinner icon
+        return html.I(className="fas fa-spinner fa-spin", style={
+            "color": "#20A7C9",
+            "font-size": "1.25rem",
+            "padding": "6px",
+            "background-color": "rgba(32, 167, 201, 0.1)",
+            "border-radius": "50%",
+            "box-shadow": "0 0 5px rgba(32, 167, 201, 0.2)"
+        })
+
+    # AI summary generation callback
+    @app.callback(
+        [Output('ai-summary-container', 'children'),
+         Output('ai-summary-container', 'style'),
+         Output('ai-summary-icon', 'children')],
+        [Input('ai-summary-icon', 'n_clicks')],
+        [State('team-dropdown', 'value'),
+         State('team-selection-type', 'value'),
+         State('team-group-dropdown', 'value'),
+         State('date-range', 'start_date'),
+         State('date-range', 'end_date'),
+         State('opponent-filter-type', 'value'),
+         State('games-played', 'children'),
+         State('win-rate', 'children'),
+         State('loss-rate-display', 'children'),
+         State('goals-scored', 'children'),
+         State('goals-conceded-display', 'children'),
+         State('goal-difference', 'children'),
+         State('match-results-table', 'data')],
+        prevent_initial_call=True
+    )
+    def update_ai_summary(n_clicks, team, selection_type, team_group, start_date, end_date, opponent_filter,
+                          games_played, win_rate, loss_rate, goals_scored,
+                          goals_conceded, goal_diff, match_data):
+        """Generate and display AI summary of dashboard data when icon is clicked."""
+        if not n_clicks:
+            return no_update, no_update, no_update
+
+        # Create spinning icon - to be returned right away, showing generation is in progress
+        spinning_icon = html.I(className="fas fa-robot ai-icon ai-icon-spinning")
+
+        # Create normal icon - to be returned when generation is complete
+        normal_icon = html.I(className="fas fa-robot ai-icon")
+
+        # Use the team group value if team selection type is 'group'
+        selected_team = team_group if selection_type == 'group' else team
+
+        if not selected_team:
+            return html.Div("Please select a team to analyze."), {'display': 'block'}, normal_icon
+
+        # Convert match data to DataFrame
+        match_df = pd.DataFrame(match_data) if match_data else pd.DataFrame()
+
+        # Create metrics dictionary from the values in the cards
+        metrics = {
+            "games_played": games_played,
+            "win_rate_value": win_rate,
+            "loss_rate_value": loss_rate,
+            "goals_scored": goals_scored,
+            "goals_conceded": goals_conceded,
+            "goal_diff": goal_diff
+        }
+
+        try:
+            # Format the date range
+            date_range = [
+                start_date or "All time",
+                end_date or datetime.now().strftime("%Y-%m-%d")
+            ]
+
+            # Display initial loading state
+            initial_content = html.Div([
+                html.Div([
+                    html.P("Analyzing data with AI...", style={"marginBottom": "10px"}),
+                    html.Div(className="typing-cursor")
+                ])
+            ])
+
+            # Generate the summary using Claude
+            print(f"Calling Claude API for summary generation for team: {selected_team}")
+            import os
+            print(f"ANTHROPIC_API_KEY set: {bool(os.getenv('ANTHROPIC_API_KEY'))}")
+
+            summary_markdown = generate_summary(
+                selected_team=selected_team,
+                date_range=date_range,
+                opponent_filter=opponent_filter or "All opponents",
+                metrics=metrics,
+                match_data=match_df,
+                stream=False
+            )
+
+            # If we get an error message back
+            if isinstance(summary_markdown, str) and summary_markdown.startswith("**Error:**"):
+                print(f"Error message received: {summary_markdown}")
+                return html.Div([
+                    html.P("Error generating AI analysis:"),
+                    html.P(summary_markdown)
+                ], style={"color": "red"}), {'display': 'block'}, normal_icon
+
+            # Return the markdown content with normal icon
+            return dcc.Markdown(summary_markdown, dangerously_allow_html=True), {'display': 'block'}, normal_icon
+
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"Error generating AI summary: {str(e)}")
+            print(error_trace)
+
+            return html.Div([
+                html.P("Error generating AI analysis:"),
+                html.P(str(e))
+            ], style={"color": "red"}), {'display': 'block'}, normal_icon

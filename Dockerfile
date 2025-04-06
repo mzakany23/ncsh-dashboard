@@ -15,8 +15,8 @@ RUN apt-get update && apt-get install -y \
 # Copy LiteFS binary
 COPY --from=flyio/litefs:0.5 /usr/local/bin/litefs /usr/local/bin/litefs
 
-# Create directory for data
-RUN mkdir -p /app/data
+# Create directory for data and set permissions
+RUN mkdir -p /app/data && chmod 755 /app/data
 
 # Install uv using pip
 RUN pip install --no-cache-dir uv
@@ -29,6 +29,12 @@ COPY src /app/src
 COPY litefs.yml /etc/litefs.yml
 COPY data/data.parquet /app/data/data.parquet
 COPY data/team_groups.db /app/data/team_groups.db
+
+# Verify data files exist and set permissions
+RUN ls -la /app/data/data.parquet && \
+    ls -la /app/data/team_groups.db && \
+    chmod 644 /app/data/data.parquet && \
+    chmod 644 /app/data/team_groups.db
 
 # Install dependencies using uv and add eventlet
 RUN uv pip install --system . && \

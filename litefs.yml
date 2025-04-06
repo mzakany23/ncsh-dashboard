@@ -2,6 +2,10 @@ fuse:
   dir: "/app/data"
   debug: false
 
+lease:
+  type: "static"
+  candidate: true
+
 exec:
   - cmd: "/app/entrypoint.sh"
 

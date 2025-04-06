@@ -2,12 +2,18 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including LiteFS requirements
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     nginx \
+    ca-certificates \
+    fuse3 \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
+
+# Copy LiteFS binary
+COPY --from=flyio/litefs:0.5 /usr/local/bin/litefs /usr/local/bin/litefs
 
 # Create directory for data and copy data files
 RUN mkdir -p /app/data
@@ -22,6 +28,7 @@ COPY pyproject.toml .
 COPY gunicorn.conf.py .
 COPY app.py .
 COPY src /app/src
+COPY litefs.yml /etc/litefs.yml
 
 # Install dependencies using uv and add eventlet
 RUN uv pip install --system . && \
@@ -89,7 +96,10 @@ mkdir -p /app/assets \n\
 echo "Starting Nginx..." \n\
 service nginx start \n\
 \n\
-# Start Dash app with Gunicorn config \n\
+# Start LiteFS and then the Dash app with Gunicorn config \n\
+echo "Starting LiteFS..." \n\
+litefs mount & \n\
+\n\
 echo "Starting Dash application..." \n\
 cd /app && gunicorn -c gunicorn.conf.py app:server \n\
 ' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh

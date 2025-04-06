@@ -17,6 +17,10 @@ primary_region = "iad"  # virginia region
   # AUTH0_CLIENT_SECRET = "${AUTH0_CLIENT_SECRET}"
   # APP_SECRET_KEY = "${APP_SECRET_KEY}"
 
+[mounts]
+  source = "litefs"
+  destination = "/app/data"
+
 [http_service]
   internal_port = 8050
   force_https = true

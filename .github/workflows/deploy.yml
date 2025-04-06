@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 env:
-  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-  S3_BUCKET: ${{ secrets.S3_BUCKET }}
-  AWS_REGION: us-east-2  # Change this to your AWS region
+  FLY_APP: ncsh-dashboard
+  S3_BUCKET: ncsh-app-data
 
 jobs:
   verify_version:
@@ -51,25 +51,31 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::YOUR_ACCOUNT_ID:role/github-actions-role
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::552336166511:role/github-actions-ncsh-dashboard
+          aws-region: us-east-2
+          audience: sts.amazonaws.com
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          AWS_REGION: us-east-2
 
       - name: Install Flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
 
-      - name: Deploy to Fly
+      - name: Deploy to Fly.io
         run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          S3_BUCKET: ${{ secrets.S3_BUCKET }}
-          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
+
+      - name: Post configure AWS credentials
+        if: always()
+        run: |
+          rm -f ~/.aws/credentials
+          rm -f ~/.aws/config
 
       - name: Create LiteFS volume if not exists
         run: |

@@ -10,15 +10,15 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     fuse3 \
     sqlite3 \
+    awscli \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy LiteFS binary
 COPY --from=flyio/litefs:0.5 /usr/local/bin/litefs /usr/local/bin/litefs
 
-# Create directory for data and copy data files
+# Create directory for data
 RUN mkdir -p /app/data
 COPY data/data.parquet /app/data/
-COPY data/team_groups.db /app/data/
 
 # Install uv using pip
 RUN pip install --no-cache-dir uv
@@ -85,8 +85,10 @@ if [ ! -f "$PARQUET_FILE" ]; then \n\
     exit 1 \n\
 fi \n\
 \n\
+# Download team_groups.db from S3 if it doesn\'t exist \n\
 if [ ! -f "/app/data/team_groups.db" ]; then \n\
-    echo "WARNING: team_groups.db not found, will be created by the app" \n\
+    echo "Downloading team_groups.db from S3..." \n\
+    aws s3 cp s3://${S3_BUCKET}/v2/processed/sqlite/team_groups.db /app/data/team_groups.db || exit 1 \n\
 fi \n\
 \n\
 # Create assets directory if it doesn\'t exist \n\

@@ -34,6 +34,11 @@ variable "s3_bucket_name" {
   type        = string
 }
 
+variable "s3_path_prefix" {
+  description = "Prefix path in S3 bucket for the database file"
+  type        = string
+}
+
 data "aws_caller_identity" "current" {}
 
 locals {

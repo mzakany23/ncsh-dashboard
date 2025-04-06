@@ -44,6 +44,7 @@ jobs:
     needs: verify_version
     if: needs.verify_version.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
+    environment: main
     steps:
       - uses: actions/checkout@v3
 

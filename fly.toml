@@ -47,7 +47,7 @@ primary_region = "iad"  # virginia region
 
 [deploy]
   strategy = "immediate"
-  release_command = "pip install -e ."
+  release_command = ""
 
 # Health check configuration
 [metrics]

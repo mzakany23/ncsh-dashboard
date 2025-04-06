@@ -93,20 +93,27 @@ Dashboard Data:
 Guidelines for your analysis:
 1. Start with an H2 heading "{selected_team} Performance Analysis"
 2. Use structural elements like H3 headings to organize your analysis ("Overview", "Match Results Trends", "Performance Against Different Opponents", "Key Insights", "Conclusion")
-3. Use bullet points for key observations
-4. Highlight important numbers or metrics with HTML color, using <span style="color:#20A7C9"> for positive stats and <span style="color:#E04355"> for concerning stats
-5. Keep paragraphs short and focused
+3. Make your analysis VISUALLY ENGAGING:
+   - Use bullet points for key observations
+   - ALWAYS highlight important numbers or metrics using both HTML color AND bold formatting:
+     - For positive/good stats: <span style="color:#20A7C9">**83.8% win rate**</span>
+     - For concerning/negative stats: <span style="color:#E04355">**8.1% loss rate**</span>
+     - For neutral but important stats: <span style="color:#FCC700">**37 games played**</span>
+   - Be generous with highlighting - almost every numeric stat should be highlighted
+   - Make sure to close all HTML tags properly
+4. Keep paragraphs short and focused (2-3 sentences maximum)
+5. Use contrasting statistics to create visual interest (e.g., "They scored X goals while conceding only Y")
 6. End with a conclusion paragraph that summarizes the overall performance
 
 Format your response using Markdown with HTML color spans where appropriate. Keep your analysis factual and data-driven, limited to 200-300 words.
 
-Example formatting (but with the actual content from this team's data):
+Example format (use exact formatting but with actual data):
 ```
 ## Team Name Performance Analysis
 
 ### Overview
-* Team has a <span style="color:#20A7C9">high win rate</span> of X%...
-* They have scored X goals while conceding Y...
+* Team has a <span style="color:#20A7C9">**high win rate of 83.8%**</span> with only <span style="color:#E04355">**8.1% losses**</span> in their <span style="color:#FCC700">**37 games**</span>.
+* They have scored a <span style="color:#20A7C9">**remarkable 298 goals**</span> while conceding only <span style="color:#20A7C9">**141 goals**</span>, resulting in a <span style="color:#20A7C9">**goal difference of 157**</span>.
 
 ### Match Results Trends
 * Recent trend shows...
@@ -154,7 +161,7 @@ def generate_summary(
                 model="claude-3-haiku-20240307",
                 max_tokens=1024,
                 temperature=0.2,
-                system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. Format your response using Markdown with HTML color spans for emphasis. Use <span style=\"color:#20A7C9\"> for positive stats and <span style=\"color:#E04355\"> for concerning stats. Make sure to close all HTML tags properly.",
+                system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. Format your response using Markdown with HTML color spans and bold formatting for emphasis. Use <span style=\"color:#20A7C9\">**text**</span> for positive stats, <span style=\"color:#E04355\">**text**</span> for concerning stats, and <span style=\"color:#FCC700\">**text**</span> for neutral but important stats. MAKE IMPORTANT STATISTICS VISUALLY STAND OUT. Make sure to close all HTML tags properly.",
                 messages=[
                     {"role": "user", "content": prompt}
                 ]
@@ -167,7 +174,7 @@ def generate_summary(
                 model="claude-3-haiku-20240307",
                 max_tokens=1024,
                 temperature=0.2,
-                system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. Format your response using Markdown with HTML color spans for emphasis. Use <span style=\"color:#20A7C9\"> for positive stats and <span style=\"color:#E04355\"> for concerning stats. Make sure to close all HTML tags properly.",
+                system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. Format your response using Markdown with HTML color spans and bold formatting for emphasis. Use <span style=\"color:#20A7C9\">**text**</span> for positive stats, <span style=\"color:#E04355\">**text**</span> for concerning stats, and <span style=\"color:#FCC700\">**text**</span> for neutral but important stats. MAKE IMPORTANT STATISTICS VISUALLY STAND OUT. Make sure to close all HTML tags properly.",
                 messages=[
                     {"role": "user", "content": prompt}
                 ]

@@ -18,10 +18,14 @@ def get_claude_client():
     Create and return an Anthropic API client using the API key from environment variables.
     """
     api_key = os.getenv("ANTHROPIC_API_KEY")
+    print(f"Anthropic API Key present: {bool(api_key)}")
+    print(f"Environment variables: {[k for k in os.environ.keys() if not k.startswith('_')]}")
+
     if not api_key:
         logger.warning("ANTHROPIC_API_KEY environment variable not set.")
         return None
 
+    print(f"Creating Anthropic client with API key starting with: {api_key[:8]}...")
     return anthropic.Anthropic(api_key=api_key)
 
 def format_dashboard_data_for_claude(
@@ -87,14 +91,26 @@ Dashboard Data:
 ```
 
 Guidelines for your analysis:
-1. Start with a brief overview of the team's performance (win rate, goals, etc.)
-2. Mention any notable trends or patterns in the match results
-3. Provide insights about how they perform against different types of opponents
-4. Include 2-3 specific data-backed observations that might not be immediately obvious
-5. End with a brief, high-level conclusion
+1. Start with an H2 heading "{selected_team} Performance Analysis"
+2. Use structural elements like H3 headings to organize your analysis ("Overview", "Match Results Trends", "Performance Against Different Opponents", "Key Insights", "Conclusion")
+3. Use bullet points for key observations
+4. Highlight important numbers or metrics with HTML color, using <span style="color:#20A7C9"> for positive stats and <span style="color:#E04355"> for concerning stats
+5. Keep paragraphs short and focused
+6. End with a conclusion paragraph that summarizes the overall performance
 
-Format your response in Markdown, with appropriate headings, bullet points, and emphasis where relevant.
-Keep your analysis factual and data-driven, limited to 200-300 words.
+Format your response using Markdown with HTML color spans where appropriate. Keep your analysis factual and data-driven, limited to 200-300 words.
+
+Example formatting (but with the actual content from this team's data):
+```
+## Team Name Performance Analysis
+
+### Overview
+* Team has a <span style="color:#20A7C9">high win rate</span> of X%...
+* They have scored X goals while conceding Y...
+
+### Match Results Trends
+* Recent trend shows...
+```
 """
     return prompt
 
@@ -104,7 +120,8 @@ def generate_summary(
     opponent_filter: str,
     metrics: Dict[str, Any],
     match_data: pd.DataFrame,
-    chart_data: Dict[str, Any] = None
+    chart_data: Dict[str, Any] = None,
+    stream: bool = False
 ) -> str:
     """
     Generate an AI summary of the dashboard data using Claude.
@@ -116,9 +133,10 @@ def generate_summary(
         metrics: Dashboard metrics (win rate, goals, etc.)
         match_data: DataFrame containing match results
         chart_data: Optional dictionary containing data used in charts
+        stream: Whether to stream the response
 
     Returns:
-        Markdown formatted summary string
+        Markdown formatted summary string or a generator if streaming
     """
     client = get_claude_client()
     if not client:
@@ -130,21 +148,38 @@ def generate_summary(
         )
 
         # Call the Claude API
-        message = client.messages.create(
-            model="claude-3-haiku-20240307",
-            max_tokens=1024,
-            temperature=0.2,
-            system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. You respond only with the requested analysis in markdown format without any introductory text or explanations about your role.",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
+        if stream:
+            # Use streaming mode - returns a generator
+            with client.messages.stream(
+                model="claude-3-haiku-20240307",
+                max_tokens=1024,
+                temperature=0.2,
+                system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. Format your response using Markdown with HTML color spans for emphasis. Use <span style=\"color:#20A7C9\"> for positive stats and <span style=\"color:#E04355\"> for concerning stats. Make sure to close all HTML tags properly.",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            ) as stream:
+                # Return the stream object directly for the callback to handle
+                return stream
+        else:
+            # Normal synchronous mode
+            message = client.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=1024,
+                temperature=0.2,
+                system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. Format your response using Markdown with HTML color spans for emphasis. Use <span style=\"color:#20A7C9\"> for positive stats and <span style=\"color:#E04355\"> for concerning stats. Make sure to close all HTML tags properly.",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
 
-        # Extract the summary from the response
-        summary = message.content[0].text
+            # Extract the summary from the response
+            summary = message.content[0].text
 
-        # Convert to HTML for display
-        return summary
+            # Process the summary to ensure proper HTML formatting
+            summary = summary.replace('```', '')  # Remove code blocks if present
+
+            return summary
 
     except Exception as e:
         logger.error(f"Error generating summary with Claude: {str(e)}")

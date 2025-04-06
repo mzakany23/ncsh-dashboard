@@ -1439,6 +1439,8 @@ def init_callbacks(app, teams, team_groups_param, conn):
          Output('ai-summary-container', 'style')],
         [Input('ai-summary-icon', 'n_clicks')],
         [State('team-dropdown', 'value'),
+         State('team-selection-type', 'value'),
+         State('team-group-dropdown', 'value'),
          State('date-range', 'start_date'),
          State('date-range', 'end_date'),
          State('opponent-filter-type', 'value'),
@@ -1451,22 +1453,17 @@ def init_callbacks(app, teams, team_groups_param, conn):
          State('match-results-table', 'data')],
         prevent_initial_call=True
     )
-    def update_ai_summary(n_clicks, team, start_date, end_date, opponent_filter,
+    def update_ai_summary(n_clicks, team, selection_type, team_group, start_date, end_date, opponent_filter,
                           games_played, win_rate, loss_rate, goals_scored,
                           goals_conceded, goal_diff, match_data):
         """Generate and display AI summary of dashboard data when icon is clicked."""
         if not n_clicks:
             return no_update, no_update
 
-        # Display loading message
-        loading_message = html.Div([
-            html.P("Analyzing data with AI...", className="typing-animation")
-        ])
+        # Use the team group value if team selection type is 'group'
+        selected_team = team_group if selection_type == 'group' else team
 
-        ctx = callback_context
-        print(f"AI summary triggered, n_clicks: {n_clicks}, team: {team}")
-
-        if not team:
+        if not selected_team:
             return html.Div("Please select a team to analyze."), {'display': 'block'}
 
         # Convert match data to DataFrame
@@ -1489,21 +1486,45 @@ def init_callbacks(app, teams, team_groups_param, conn):
                 end_date or datetime.now().strftime("%Y-%m-%d")
             ]
 
-            # Generate the summary using Claude
-            print("Calling Claude API for summary generation...")
+            # Display initial loading state
+            initial_content = html.Div([
+                html.Div([
+                    html.P("Analyzing data with AI...", style={"marginBottom": "10px"}),
+                    html.Div(className="typing-cursor")
+                ])
+            ])
+
+            # Generate the summary using Claude (non-streaming for simplicity and compatibility)
+            print(f"Calling Claude API for summary generation for team: {selected_team}")
+            import os
+            print(f"ANTHROPIC_API_KEY set: {bool(os.getenv('ANTHROPIC_API_KEY'))}")
+
             summary_markdown = generate_summary(
-                selected_team=team,
+                selected_team=selected_team,
                 date_range=date_range,
                 opponent_filter=opponent_filter or "All opponents",
                 metrics=metrics,
-                match_data=match_df
+                match_data=match_df,
+                stream=False
             )
 
+            # If we get an error message back
+            if isinstance(summary_markdown, str) and summary_markdown.startswith("**Error:**"):
+                print(f"Error message received: {summary_markdown}")
+                return html.Div([
+                    html.P("Error generating AI analysis:"),
+                    html.P(summary_markdown)
+                ], style={"color": "red"}), {'display': 'block'}
+
             # Return the markdown content
-            return dcc.Markdown(summary_markdown), {'display': 'block'}
+            return dcc.Markdown(summary_markdown, dangerously_allow_html=True), {'display': 'block'}
+
         except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
             print(f"Error generating AI summary: {str(e)}")
+            print(error_trace)
             return html.Div([
                 html.P("Error generating AI analysis:"),
-                html.Pre(str(e), style={"color": "red"})
-            ]), {'display': 'block'}
+                html.P(str(e))
+            ], style={"color": "red"}), {'display': 'block'}

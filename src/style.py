@@ -201,6 +201,51 @@ def init_style():
         .Select-control {
             min-height: 44px !important;
         }
+
+        /* Hide Win/Loss Distribution chart */
+        #opponent-analysis-section .row > div:first-child {
+            display: none !important;
+        }
+
+        .summary-card {
+            margin-bottom: 15px;
+        }
+
+        .section-header {
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .summary-value {
+            font-size: 1.8rem;
+        }
+
+        .filter-panel {
+            padding: 16px;
+        }
+
+        .filter-panel .form-label {
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .filter-panel .mb-2 {
+            margin-bottom: 1rem !important;
+        }
+
+        .filter-panel .mb-4 {
+            margin-bottom: 1.5rem !important;
+        }
+
+        /* Increase touch target size for radio buttons */
+        .filter-panel .form-check {
+            padding: 12px 0;
+        }
+
+        /* Make dropdowns more touch-friendly */
+        .filter-panel .Select-control {
+            min-height: 44px !important;
+        }
     }
 
     /* Fix for iOS scrolling */
@@ -406,49 +451,6 @@ def init_style():
         overflow: hidden;
         background-color: var(--white);
         border: 1px solid var(--border-color);
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .summary-card {
-            margin-bottom: 15px;
-        }
-
-        .section-header {
-            margin-top: 20px;
-            margin-bottom: 10px;
-        }
-
-        .summary-value {
-            font-size: 1.8rem;
-        }
-
-        .filter-panel {
-            padding: 16px;
-        }
-
-        .filter-panel .form-label {
-            margin-top: 16px;
-            margin-bottom: 8px;
-        }
-
-        .filter-panel .mb-2 {
-            margin-bottom: 1rem !important;
-        }
-
-        .filter-panel .mb-4 {
-            margin-bottom: 1.5rem !important;
-        }
-
-        /* Increase touch target size for radio buttons */
-        .filter-panel .form-check {
-            padding: 12px 0;
-        }
-
-        /* Make dropdowns more touch-friendly */
-        .filter-panel .Select-control {
-            min-height: 44px !important;
-        }
     }
 
     /* Loading Spinner Styles */

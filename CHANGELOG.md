@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2024-03-21
+
+### Added
+- Mobile-optimized interface with improved touch interactions
+- Responsive date range picker with enhanced iPad support
+- Team group management system with CRUD operations
+- Advanced opponent filtering system (specific, worthy, team groups)
+- Performance trend visualization
+- Goal statistics charts
+- Match result distribution analysis
+- Opponent analysis section with detailed metrics
+- Mobile menu toggle for better navigation on small screens
+
+### Fixed
+- Date range picker styling issues on mobile devices
+- NA score handling in match results
+- Team group selection and filtering edge cases
+- Mobile layout and spacing inconsistencies
+- Z-index conflicts in overlapping components
+- Win/Loss calculation accuracy for NA scores
+
+### Changed
+- Improved mobile UI/UX with better touch targets
+- Enhanced data visualization responsiveness
+- Optimized database queries for better performance
+- Streamlined team group management interface
+- Refined opponent analysis metrics calculation
+
+### Removed
+- Win/Loss Distribution chart on mobile devices for cleaner interface
+- Obsolete styling rules and unused components
+
 ## [0.1.8] - 2024-04-06
 
 ### Fixed

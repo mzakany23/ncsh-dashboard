@@ -302,11 +302,13 @@ def init_callbacks(app, teams, team_groups_param, conn):
         Returns:
             Dictionary of calculated metrics
         """
-        games_played = len(filtered_matches_df)
+        # Filter out NA results for metrics calculations
+        valid_matches_df = filtered_matches_df[filtered_matches_df['result'] != 'NA']
+        games_played = len(valid_matches_df)
 
         if games_played > 0:
-            wins = len(filtered_matches_df[filtered_matches_df['result'] == 'Win'])
-            losses = len(filtered_matches_df[filtered_matches_df['result'] == 'Loss'])
+            wins = len(valid_matches_df[valid_matches_df['result'] == 'Win'])
+            losses = len(valid_matches_df[valid_matches_df['result'] == 'Loss'])
             win_rate = (wins / games_played) * 100
             loss_rate = (losses / games_played) * 100
 
@@ -314,11 +316,12 @@ def init_callbacks(app, teams, team_groups_param, conn):
             win_rate_value = f"{win_rate:.1f}%"
             loss_rate_value = f"{loss_rate:.1f}%"
 
-            goals_scored = filtered_matches_df['team_score'].sum()
-            goals_conceded = filtered_matches_df['opponent_score'].sum()
+            # Only sum scores for matches with valid scores
+            goals_scored = valid_matches_df['team_score'].sum()
+            goals_conceded = valid_matches_df['opponent_score'].sum()
             goal_diff = goals_scored - goals_conceded
         else:
-            # If no games after filtering, set default values
+            # If no valid games after filtering, set default values
             win_rate_value = "0.0%"
             loss_rate_value = "0.0%"
             goals_scored = 0
@@ -328,11 +331,12 @@ def init_callbacks(app, teams, team_groups_param, conn):
         # Prepare data for the match results table from the filtered dataset
         table_data = []
         for _, row in filtered_matches_df.iterrows():
+            score_text = "<NA> - <NA>" if row['result'] == 'NA' else f"{row['home_score']} - {row['away_score']}"
             table_data.append({
                 'date': row['date'].strftime('%Y-%m-%d'),
                 'home_team': row['home_team'],
                 'away_team': row['away_team'],
-                'score': f"{row['home_score']} - {row['away_score']}",
+                'score': score_text,
                 'result': row['result'],
                 'opponent': row['opponent_team']
             })
@@ -559,7 +563,9 @@ def init_callbacks(app, teams, team_groups_param, conn):
         pie_fig = go.Figure()
 
         if not filtered_matches_df.empty:
-            results_count = filtered_matches_df['result'].value_counts()
+            # Filter out NA results for the pie chart
+            valid_matches_df = filtered_matches_df[filtered_matches_df['result'] != 'NA']
+            results_count = valid_matches_df['result'].value_counts()
 
             # Create a better visualization with results distribution using Superset colors
             pie_fig.add_trace(go.Pie(

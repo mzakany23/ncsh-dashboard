@@ -109,6 +109,7 @@ def get_combined_matches_query(team, filter_conditions):
             ELSE ''
         END AS opponent_team,
         CASE
+            WHEN home_score IS NULL OR away_score IS NULL THEN 'NA'
             WHEN ({home_team_pattern}) AND home_score > away_score THEN 'Win'
             WHEN ({away_team_pattern}) AND away_score > home_score THEN 'Win'
             WHEN home_score = away_score THEN 'Draw'
@@ -149,6 +150,7 @@ def get_team_matches_query(team, filter_conditions):
             ELSE ''
         END AS opponent_team,
         CASE
+            WHEN home_score IS NULL OR away_score IS NULL THEN 'NA'
             WHEN home_team = '{team}' AND home_score > away_score THEN 'Win'
             WHEN away_team = '{team}' AND away_score > home_score THEN 'Win'
             WHEN home_score = away_score THEN 'Draw'
@@ -305,6 +307,7 @@ def get_team_group_matches_query(teams, filter_conditions):
             ELSE ''
         END AS opponent_team,
         CASE
+            WHEN home_score IS NULL OR away_score IS NULL THEN 'NA'
             WHEN ({home_condition_str}) AND home_score > away_score THEN 'Win'
             WHEN ({away_condition_str}) AND away_score > home_score THEN 'Win'
             WHEN home_score = away_score THEN 'Draw'

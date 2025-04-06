@@ -1,0 +1,10 @@
+fuse:
+  dir: "/app/data"
+  debug: false
+
+exec:
+  - cmd: "/app/entrypoint.sh"
+
+proxy:
+  target: "http://localhost:8050"
+  addr: ":80"

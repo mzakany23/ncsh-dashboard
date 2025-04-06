@@ -350,7 +350,19 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
             # Main content area
             dbc.Col([
                 # Summary statistics cards in a single row at the top of the story
-                html.H4("Performance Summary", className="section-header"),
+                html.Div([
+                    html.H4("Performance Summary", className="section-header"),
+                    html.Div([
+                        html.I(className="fas fa-robot ai-icon", id="ai-summary-icon",
+                            title="Summarize this page with AI"),
+                        dcc.Tooltip(id="ai-tooltip", target="ai-summary-icon",
+                                children=["Click to generate AI analysis"])
+                    ], className="ai-icon-container")
+                ], className="section-header-container d-flex align-items-center"),
+
+                # Container for AI summary
+                html.Div(id='ai-summary-container', className='ai-summary-content mb-3', style={'display': 'none'}),
+
                 dcc.Loading(
                     id="loading-performance-metrics",
                     type="circle",
@@ -581,20 +593,6 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                         ], className="mb-4")
                     ]
                 ),
-
-                # AI Summary Section
-                html.Div([
-                    html.Div([
-                        html.H2('AI Analysis', className='section-title'),
-                        html.Button('Generate Analysis', id='generate-summary-button',
-                                    className='btn btn-primary', n_clicks=0),
-                        dcc.Loading(
-                            type="circle",
-                            children=html.Div(id='ai-summary-container', className='ai-summary-content',
-                                             style={'marginTop': '20px'})
-                        )
-                    ], className='card')
-                ], id='ai-summary-section', className='section'),
 
                 # Footer
                 dbc.Row([

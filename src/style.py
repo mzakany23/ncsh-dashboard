@@ -631,5 +631,91 @@ def init_style():
             padding: 10px;
         }
     }
+
+    /* AI Summary Icon and Container */
+    .section-header-container {
+        position: relative;
+        margin-bottom: 15px;
+    }
+
+    .ai-icon-container {
+        margin-left: 10px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .ai-icon {
+        color: var(--primary-color);
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition: transform 0.2s, color 0.2s;
+    }
+
+    .ai-icon:hover {
+        color: var(--secondary-color);
+        transform: scale(1.1);
+    }
+
+    /* AI Summary Content */
+    .ai-summary-content {
+        background-color: rgba(32, 167, 201, 0.05);
+        border-left: 3px solid var(--primary-color);
+        padding: 15px;
+        border-radius: 4px;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        animation: fade-in 0.5s ease-in-out;
+    }
+
+    @keyframes fade-in {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .ai-summary-content h1,
+    .ai-summary-content h2,
+    .ai-summary-content h3 {
+        color: var(--primary-color);
+        margin-bottom: 10px;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .ai-summary-content p {
+        margin-bottom: 10px;
+    }
+
+    .ai-summary-content strong {
+        color: var(--secondary-color);
+        font-weight: 600;
+    }
+
+    .ai-summary-content ul,
+    .ai-summary-content ol {
+        padding-left: 20px;
+        margin-bottom: 10px;
+    }
+
+    .ai-summary-content li {
+        margin-bottom: 5px;
+    }
+
+    /* Typing animation effect */
+    .typing-animation {
+        border-right: 2px solid var(--primary-color);
+        animation: typing 1s steps(30, end) infinite;
+    }
+
+    @keyframes typing {
+        from { border-color: var(--primary-color); }
+        to { border-color: transparent; }
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 1024px) {
+        .ai-summary-content {
+            padding: 10px;
+        }
+    }
     '''
     return custom_css

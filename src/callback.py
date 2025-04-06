@@ -21,9 +21,11 @@ from src.util import (
     filter_matches_by_opponents,
     identify_worthy_opponents
 )
-from dash import callback, html
+from dash import callback, html, dcc, no_update
 import dash
 from src.claude_summary import generate_summary
+import json
+import time
 
 
 def init_callbacks(app, teams, team_groups_param, conn):
@@ -1420,54 +1422,49 @@ def init_callbacks(app, teams, team_groups_param, conn):
         return {"display": "none"}
 
     @app.callback(
-        Output('ai-summary-container', 'children'),
-        [
-            Input('generate-summary-button', 'n_clicks')
-        ],
-        [
-            State('team-dropdown', 'value'),
-            State('date-range-picker', 'start_date'),
-            State('date-range-picker', 'end_date'),
-            State('opponent-dropdown', 'value'),
-            State('dashboard-metrics', 'children'),
-            State('match-results-table', 'data')
-        ],
+        [Output('ai-summary-container', 'children'),
+         Output('ai-summary-container', 'style')],
+        [Input('ai-summary-icon', 'n_clicks')],
+        [State('team-dropdown', 'value'),
+         State('date-range-picker', 'start_date'),
+         State('date-range-picker', 'end_date'),
+         State('opponent-dropdown', 'value'),
+         State('games-played', 'children'),
+         State('win-rate', 'children'),
+         State('loss-rate-display', 'children'),
+         State('goals-scored', 'children'),
+         State('goals-conceded-display', 'children'),
+         State('goal-difference', 'children'),
+         State('match-results-table', 'data')],
         prevent_initial_call=True
     )
-    def update_ai_summary(n_clicks, team, start_date, end_date, opponent_filter, dashboard_metrics, match_data):
-        """Generate and display AI summary of dashboard data."""
-        if n_clicks == 0:
-            return html.Div("Click the button to generate an AI analysis of the current dashboard data.")
+    def update_ai_summary(n_clicks, team, start_date, end_date, opponent_filter,
+                          games_played, win_rate, loss_rate, goals_scored,
+                          goals_conceded, goal_diff, match_data):
+        """Generate and display AI summary of dashboard data when icon is clicked."""
+        if not n_clicks:
+            return no_update, no_update
 
         if not team:
-            return html.Div("Please select a team to analyze.")
+            return html.Div("Please select a team to analyze."), {'display': 'block'}
+
+        # Initially show a loading message with typing animation
+        initial_message = html.Div([
+            html.P("Analyzing your data with AI...", className="typing-animation")
+        ])
 
         # Convert match data to DataFrame
         match_df = pd.DataFrame(match_data) if match_data else pd.DataFrame()
 
-        # Extract metrics from dashboard_metrics (these are stored in a hidden div)
-        metrics = {}
-        try:
-            context = callback_context
-            if context.triggered:
-                # Extract metrics from the page state
-                metrics = {
-                    "games_played": len(match_df),
-                    "win_rate_value": f"{len(match_df[match_df['result'] == 'Win']) / max(1, len(match_df)) * 100:.1f}%",
-                    "loss_rate_value": f"{len(match_df[match_df['result'] == 'Loss']) / max(1, len(match_df)) * 100:.1f}%",
-                    "goals_scored": sum(match_df['score'].apply(lambda x: int(x.split(' - ')[0]) if ' - ' in str(x) and x.split(' - ')[0].isdigit() else 0)),
-                    "goals_conceded": sum(match_df['score'].apply(lambda x: int(x.split(' - ')[1]) if ' - ' in str(x) and x.split(' - ')[1].isdigit() else 0)),
-                }
-                metrics["goal_diff"] = metrics["goals_scored"] - metrics["goals_conceded"]
-        except Exception as e:
-            metrics = {
-                "games_played": 0,
-                "win_rate_value": "0.0%",
-                "loss_rate_value": "0.0%",
-                "goals_scored": 0,
-                "goals_conceded": 0,
-                "goal_diff": 0
-            }
+        # Create metrics dictionary from the values in the cards
+        metrics = {
+            "games_played": games_played,
+            "win_rate_value": win_rate,
+            "loss_rate_value": loss_rate,
+            "goals_scored": goals_scored,
+            "goals_conceded": goals_conceded,
+            "goal_diff": goal_diff
+        }
 
         # Format the date range
         date_range = [
@@ -1484,8 +1481,5 @@ def init_callbacks(app, teams, team_groups_param, conn):
             match_data=match_df
         )
 
-        # Convert markdown to HTML and return
-        return html.Div(
-            dcc.Markdown(summary_markdown),
-            className='ai-summary-content markdown-body'
-        )
+        # Return the markdown content
+        return dcc.Markdown(summary_markdown), {'display': 'block'}

@@ -28,6 +28,9 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
         max_date = datetime.now().strftime('%Y-%m-%d')
     loading_spinner = get_loading_spinner()
     app.layout = dbc.Container([
+        # URL location component for tracking state
+        dcc.Location(id='url', refresh=False),
+
         # Loading spinner container that will be shown/hidden via callbacks
         html.Div(
             id="loading-spinner-container",
@@ -158,7 +161,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                             dcc.Dropdown(
                                 id='team-group-dropdown',
                                 options=[{'label': group_name, 'value': group_name} for group_name in team_groups.keys()],
-                                value=next(iter(team_groups.keys())) if team_groups else None,
+                                value=None,  # Initially None, will be set by callback
                                 searchable=True,
                                 className="mb-2",
                                 placeholder="Select a team group"

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, date
 import plotly.graph_objects as go
 import pandas as pd
 import sqlite3
+import dash  # Make sure dash is imported for dash.no_update
 from src.db import get_db_connection, get_team_groups, create_team_group, update_team_group, delete_team_group
 from src.queries import (
     get_key_west_team_filter,
@@ -22,10 +23,9 @@ from src.util import (
     identify_worthy_opponents
 )
 from dash import callback, html, dcc, no_update
-import dash
-from src.claude_summary import generate_summary
 import json
 import time
+from urllib.parse import parse_qs, urlencode
 
 
 def init_callbacks(app, teams, team_groups_param, conn):
@@ -1339,6 +1339,69 @@ def init_callbacks(app, teams, team_groups_param, conn):
 
         print(f"Final selected group: {selected_group}")
         return status, new_name_value, new_teams_value, team_group_options, selected_group
+
+    # Callback to update URL when team group selection changes
+    @app.callback(
+        Output('url', 'search'),
+        [Input('team-group-dropdown', 'value'),
+         Input('team-selection-type', 'value')],
+        [State('url', 'search')],
+        prevent_initial_call=True
+    )
+    def update_url_team_group(selected_team_group, selection_type, current_search):
+        """Update URL with team group selection"""
+        print(f"Debug: Updating URL with team group={selected_team_group}, selection_type={selection_type}")
+
+        # Only update for team group selection type
+        if selection_type != 'group' or not selected_team_group:
+            return current_search or ''
+
+        # Parse current query string if it exists
+        query_params = parse_qs(current_search[1:]) if current_search and current_search.startswith('?') else {}
+
+        # Update or add team_group parameter
+        query_params['team_group'] = [selected_team_group]
+
+        # Return updated query string
+        updated_search = '?' + urlencode(query_params, doseq=True)
+        print(f"Debug: Updated URL search to {updated_search}")
+        return updated_search
+
+    # Callback to set team dropdown selection based on URL
+    @app.callback(
+        [Output('team-group-dropdown', 'value', allow_duplicate=True),
+         Output('team-selection-type', 'value', allow_duplicate=True)],
+        [Input('url', 'search')],
+        [State('team-group-dropdown', 'options')],
+        prevent_initial_call='initial_duplicate'
+    )
+    def set_team_from_url(search, team_group_options):
+        """Set team selection from URL parameters"""
+        print(f"Debug: Setting team from URL search: {search}")
+
+        # Check if team_group parameter exists in URL
+        if search and search.startswith('?'):
+            # Parse query string
+            query_params = parse_qs(search[1:])
+
+            # Check if team_group parameter exists
+            if 'team_group' in query_params:
+                team_group = query_params['team_group'][0]
+
+                # Verify it's a valid option
+                available_groups = [opt['value'] for opt in team_group_options]
+                if team_group in available_groups:
+                    print(f"Debug: Setting team group to {team_group} from URL")
+                    return team_group, 'group'
+
+        # If URL parameter not present or not valid, set default (first alphabetical)
+        if team_group_options:
+            default_group = team_group_options[0]['value']
+            print(f"Debug: Setting default team group to {default_group}")
+            return default_group, 'group'
+
+        # If no options available, don't update
+        return dash.no_update, dash.no_update
 
     # Callback to update team group options for the opponent filter
     @app.callback(

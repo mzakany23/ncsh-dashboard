@@ -15,30 +15,29 @@ jobs:
     name: Verify version change
     runs-on: ubuntu-latest
     outputs:
-      should_deploy: ${{ steps.check_version.outputs.changed }}
-      new_version: ${{ steps.check_version.outputs.version }}
+      should_deploy: ${{ steps.check_version.outputs.should_deploy }}
+      new_version: ${{ steps.check_version.outputs.new_version }}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 2  # Fetch the last two commits to compare changes
-
-      - name: Check if version changed
+      - uses: actions/checkout@v4
+      - name: Check version change
         id: check_version
         run: |
-          # Get the latest version from current CHANGELOG
-          NEW_VERSION=$(grep -m 1 "## \[" CHANGELOG.md | sed 's/## \[\(.*\)\].*/\1/')
+          # Get the latest version from CHANGELOG.md
+          LATEST_VERSION=$(grep -m 1 '^## \[[0-9]\+\.[0-9]\+\.[0-9]\]' CHANGELOG.md | sed 's/^## \[\([0-9]\+\.[0-9]\+\.[0-9]\)\].*/\1/')
+          echo "Latest version in CHANGELOG: $LATEST_VERSION"
 
-          # Get the previous version by checking the previous commit
-          OLD_VERSION=$(git show HEAD^:CHANGELOG.md | grep -m 1 "## \[" | sed 's/## \[\(.*\)\].*/\1/' || echo "none")
+          # Get the latest git tag
+          git fetch --tags
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
+          echo "Latest git tag: $LATEST_TAG"
 
-          if [ "$NEW_VERSION" != "$OLD_VERSION" ]; then
-            echo "New version detected: $NEW_VERSION (was: $OLD_VERSION)"
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          # Compare versions
+          if [ "$LATEST_VERSION" != "$LATEST_TAG" ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           else
-            echo "No version change detected"
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           fi
 
   deploy:
@@ -66,6 +65,19 @@ jobs:
       - name: Install Flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Check if LiteFS volume exists
+        id: check_volume
+        run: |
+          if ! fly volumes list --app ${{ env.FLY_APP }} | grep -q "litefs"; then
+            echo "volume_exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "volume_exists=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create LiteFS volume if not exists
+        if: steps.check_volume.outputs.volume_exists == 'false'
+        run: fly volume create litefs -r iad -n 1 --app ${{ env.FLY_APP }}
+
       - name: Deploy to Fly.io
         run: flyctl deploy --remote-only
         env:
@@ -77,20 +89,13 @@ jobs:
           rm -f ~/.aws/credentials
           rm -f ~/.aws/config
 
-      - name: Create LiteFS volume if not exists
-        run: |
-          if ! flyctl volumes list | grep -q "litefs"; then
-            flyctl volumes create litefs --size 10
-          fi
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
       - name: Configure Consul
         run: flyctl consul attach
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Create deployment tag
+      - name: Create git tag
+        if: success()
         run: |
-          git tag -a "v${{ needs.verify_version.outputs.new_version }}" -m "Release ${{ needs.verify_version.outputs.new_version }}"
-          git push origin "v${{ needs.verify_version.outputs.new_version }}"
+          git tag ${{ needs.verify_version.outputs.new_version }}
+          git push origin ${{ needs.verify_version.outputs.new_version }}

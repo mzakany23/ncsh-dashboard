@@ -7,6 +7,8 @@ on:
 
 env:
   FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+  S3_BUCKET: ${{ secrets.S3_BUCKET }}
+  AWS_REGION: us-east-2  # Change this to your AWS region
 
 jobs:
   verify_version:
@@ -45,8 +47,17 @@ jobs:
     if: needs.verify_version.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     environment: main
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::YOUR_ACCOUNT_ID:role/github-actions-role
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Install Flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
@@ -55,6 +66,10 @@ jobs:
         run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
 
       - name: Create LiteFS volume if not exists
         run: |

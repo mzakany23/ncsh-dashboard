@@ -39,7 +39,7 @@ resource "aws_iam_policy" "s3_access" {
         ]
         Resource = [
           "arn:aws:s3:::${var.s3_bucket_name}",
-          "arn:aws:s3:::${var.s3_bucket_name}/*"
+          "arn:aws:s3:::${var.s3_bucket_name}/${var.s3_path_prefix}*"
         ]
       }
     ]

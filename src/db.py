@@ -54,15 +54,30 @@ def init_db():
 
 def init_team_db():
     """Initialize the SQLite database for team groups."""
-    # Get the directory path - store at the project root data directory for persistence
-    dir_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+    # Always use the absolute path that matches the LiteFS mount point in deployment
+    # But fall back to the relative path for local development
+    if os.path.exists('/app/data'):
+        # In production (Docker/Fly.io)
+        db_path = "/app/data/team_groups.db"
+    else:
+        # Local development
+        dir_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+        os.makedirs(dir_path, exist_ok=True)
+        db_path = os.path.join(dir_path, 'team_groups.db')
 
-    # Create the directory if it doesn't exist
-    os.makedirs(dir_path, exist_ok=True)
-
-    # Set the database path
-    db_path = os.path.join(dir_path, 'team_groups.db')
     print(f"Initializing SQLite database at {db_path}")
+
+    # Check directory and log database info
+    dir_path = os.path.dirname(db_path)
+    if not os.path.exists(dir_path):
+        print(f"Creating directory: {dir_path}")
+        os.makedirs(dir_path, exist_ok=True)
+
+    # Log existing database info before connecting
+    if os.path.exists(db_path):
+        print(f"Database already exists, size: {os.path.getsize(db_path)} bytes")
+    else:
+        print(f"Database file does not exist, will be created")
 
     # Connect to the database
     conn = sqlite3.connect(db_path)
@@ -70,6 +85,9 @@ def init_team_db():
 
     # Enable foreign key support
     cursor.execute("PRAGMA foreign_keys = ON")
+
+    # Set journal mode to WAL for better concurrency
+    cursor.execute("PRAGMA journal_mode = WAL")
 
     # Create the team_groups table if it doesn't exist
     cursor.execute('''
@@ -98,20 +116,34 @@ def init_team_db():
 
 def get_db_connection():
     """Get a SQLite database connection."""
-    # Get the directory path - must match the path used in init_team_db
-    dir_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
-
-    # Create the directory if it doesn't exist
-    os.makedirs(dir_path, exist_ok=True)
-
-    # Set the database path
-    db_path = os.path.join(dir_path, 'team_groups.db')
+    # Always use the absolute path that matches the LiteFS mount point in deployment
+    # But fall back to the relative path for local development
+    if os.path.exists('/app/data'):
+        # In production (Docker/Fly.io)
+        db_path = "/app/data/team_groups.db"
+    else:
+        # Local development
+        dir_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+        os.makedirs(dir_path, exist_ok=True)
+        db_path = os.path.join(dir_path, 'team_groups.db')
 
     print(f"Connecting to database at {db_path}")
+
+    # Add more detailed debugging
+    if os.path.exists(db_path):
+        print(f"Database file exists, size: {os.path.getsize(db_path)} bytes")
+        # Print file permissions
+        print(f"File permissions: {oct(os.stat(db_path).st_mode)[-3:]}")
+    else:
+        print(f"WARNING: Database file does not exist at {db_path}")
 
     # Connect to the database and enable foreign keys
     conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA foreign_keys = ON")
+
+    # Add journaling mode logging
+    pragma_journal = conn.execute("PRAGMA journal_mode").fetchone()[0]
+    print(f"SQLite journal mode: {pragma_journal}")
 
     return conn
 
@@ -127,6 +159,9 @@ def create_team_group(name, teams):
     cursor = conn.cursor()
 
     try:
+        # Add transaction begin
+        conn.execute("BEGIN IMMEDIATE TRANSACTION")
+
         # Check if the group already exists
         cursor.execute("SELECT id, name FROM team_groups WHERE name = ?", (name,))
         existing = cursor.fetchone()
@@ -147,9 +182,6 @@ def create_team_group(name, teams):
             print(f"Cannot create duplicate group with different teams. The group already has these teams: {existing_teams}")
             return False
 
-        # Create a transaction
-        conn.execute("BEGIN TRANSACTION")
-
         # Create the team group
         cursor.execute("INSERT INTO team_groups (name) VALUES (?)", (name,))
         group_id = cursor.lastrowid
@@ -162,7 +194,19 @@ def create_team_group(name, teams):
             )
 
         conn.commit()
-        print(f"Successfully created team group '{name}' with {len(teams)} teams at {conn.execute('PRAGMA database_list').fetchone()[2]}")
+
+        # Verify the data was written by reading it back
+        cursor.execute("SELECT id FROM team_groups WHERE name = ?", (name,))
+        group_id_check = cursor.fetchone()
+        if group_id_check:
+            db_path = conn.execute('PRAGMA database_list').fetchone()[2]
+            print(f"Successfully created team group '{name}' with {len(teams)} teams at {db_path}")
+            print(f"Verified team group '{name}' (ID: {group_id_check[0]}) was successfully saved to {db_path}")
+            if os.path.exists(db_path):
+                print(f"Database file size after commit: {os.path.getsize(db_path)} bytes")
+        else:
+            print(f"WARNING: Failed to verify team group '{name}' was saved!")
+
         return True
     except sqlite3.Error as e:
         conn.rollback()

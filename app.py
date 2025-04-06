@@ -5,6 +5,9 @@ This dashboard provides visualizations and statistics for soccer match data,
 allowing users to filter by date range and team to explore performance metrics.
 """
 
+# Import monkey patch first, before any other imports
+from src.monkey_patch import *
+
 import os
 import sys
 import dash

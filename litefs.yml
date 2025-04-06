@@ -1,10 +1,12 @@
 fuse:
   dir: "/app/data"
-  debug: false
+  debug: true
 
 lease:
   type: "static"
   candidate: true
+  advertise-url: "http://${HOSTNAME}.internal:20202"
+  promote: true
 
 exec:
   - cmd: "/app/entrypoint.sh"
@@ -12,3 +14,13 @@ exec:
 proxy:
   target: "http://localhost:8050"
   addr: ":80"
+
+# SQLite-specific settings
+sqlite:
+  wal: true  # Enable Write-Ahead Logging
+  page-size: 4096
+  busy-timeout: "5s"
+
+# Add logging
+log:
+  level: "debug"

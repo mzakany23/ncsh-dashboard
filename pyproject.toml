@@ -1,6 +1,6 @@
 [project]
 name = "ncsh-dashboard"
-version = "0.1.0"
+version = "0.1.9"
 description = "NC Soccer Analytics Dashboard"
 requires-python = ">=3.10"
 dependencies = [

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added consistent horizontal rules under all section headers
 - Standardized loading spinner styles across all dashboard components
 - Fixed section header spacing and alignment issues
+- Fixed deployment issue with LiteFS volume mount by adding backup data directory
 
 ## [1.1.1] - 2025-04-06
 

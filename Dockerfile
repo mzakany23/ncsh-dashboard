@@ -44,6 +44,8 @@ ENV VIRTUAL_ENV="/app/venv"
 
 # Create directory for data and set permissions
 RUN mkdir -p /app/data && chmod 755 /app/data
+# Create a backup directory that won't be affected by volume mounts
+RUN mkdir -p /app/backup_data && chmod 755 /app/backup_data
 
 # Copy application files
 COPY gunicorn.conf.py .
@@ -52,6 +54,9 @@ COPY src /app/src
 COPY litefs.yml /etc/litefs.yml
 COPY data/data.parquet /app/data/data.parquet
 COPY data/team_groups.db /app/data/team_groups.db
+# Also copy to backup directory
+COPY data/data.parquet /app/backup_data/data.parquet
+COPY data/team_groups.db /app/backup_data/team_groups.db
 COPY entrypoint.sh /app/entrypoint.sh
 
 # Set executable permission for entrypoint script

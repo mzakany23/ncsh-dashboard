@@ -23,6 +23,9 @@ mkdir -p /app/assets
 echo "Starting Nginx..."
 service nginx start
 
+# Backup data directory (not mounted by LiteFS)
+BACKUP_DATA_DIR="/app/backup_data"
+
 # Check if we're running in a Docker/Fly.io environment
 if [ -d "/app/data" ]; then
   echo "Running in production environment with mounted data directory"
@@ -30,21 +33,36 @@ if [ -d "/app/data" ]; then
   # Ensure data directory has correct permissions
   chmod 755 /app/data
 
-  # Check if database exists
+  # Check if database exists, if not copy from backup
   if [ -f "/app/data/team_groups.db" ]; then
     echo "Database file exists, size: $(stat -c%s /app/data/team_groups.db) bytes"
     echo "File permissions: $(stat -c%a /app/data/team_groups.db)"
     chmod 644 /app/data/team_groups.db
   else
-    echo "Database file does not exist, will be created during initialization"
+    echo "Database file does not exist in mounted volume"
+    if [ -f "$BACKUP_DATA_DIR/team_groups.db" ]; then
+      echo "Copying database from backup"
+      cp "$BACKUP_DATA_DIR/team_groups.db" "/app/data/team_groups.db"
+      chmod 644 /app/data/team_groups.db
+    else
+      echo "Database file will be created during initialization"
+    fi
   fi
 
-  # Check if parquet file exists
+  # Check if parquet file exists, if not copy from backup
   if [ -f "$PARQUET_FILE" ]; then
     echo "Parquet file exists, size: $(stat -c%s $PARQUET_FILE) bytes"
   else
-    echo "ERROR: Parquet file not found at $PARQUET_FILE"
-    exit 1
+    echo "Parquet file not found at $PARQUET_FILE"
+    if [ -f "$BACKUP_DATA_DIR/data.parquet" ]; then
+      echo "Copying Parquet file from backup"
+      cp "$BACKUP_DATA_DIR/data.parquet" "$PARQUET_FILE"
+      chmod 644 "$PARQUET_FILE"
+      echo "Copied Parquet file, size: $(stat -c%s $PARQUET_FILE) bytes"
+    else
+      echo "ERROR: Parquet file not found in backup. Cannot continue."
+      exit 1
+    fi
   fi
 else
   echo "Running in development environment"

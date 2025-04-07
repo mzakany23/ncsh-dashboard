@@ -382,7 +382,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
 
                 dcc.Loading(
                     id="loading-performance-metrics",
-                    type="circle",
+                    type="default",
                     color="#20A7C9",
                     children=[
                         dbc.Row([

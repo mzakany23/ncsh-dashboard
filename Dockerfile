@@ -52,6 +52,10 @@ COPY src /app/src
 COPY litefs.yml /etc/litefs.yml
 COPY data/data.parquet /app/data/data.parquet
 COPY data/team_groups.db /app/data/team_groups.db
+COPY entrypoint.sh /app/entrypoint.sh
+
+# Set executable permission for entrypoint script
+RUN chmod +x /app/entrypoint.sh
 
 # Verify data files exist and set permissions
 RUN ls -la /app/data/data.parquet && \
@@ -88,40 +92,6 @@ RUN echo 'server { \
         proxy_cache_bypass $http_upgrade; \
     } \
 }' > /etc/nginx/conf.d/dash.conf
-
-# Create entrypoint script
-RUN echo '#!/bin/bash \n\
-echo "Starting NC Soccer Analytics Dashboard" \n\
-\n\
-# Activate virtual environment \n\
-source /app/venv/bin/activate \n\
-\n\
-# Explicitly set the environment variables needed by the app \n\
-export PARQUET_FILE=${PARQUET_FILE:-"/app/data/data.parquet"} \n\
-export AUTH_FLASK_ROUTES=${AUTH_FLASK_ROUTES:-"true"} \n\
-\n\
-# Log important environment settings \n\
-echo "Environment:" \n\
-echo "- PARQUET_FILE: $PARQUET_FILE" \n\
-echo "- AUTH_FLASK_ROUTES: $AUTH_FLASK_ROUTES" \n\
-echo "- AUTH0_CALLBACK_URL: $AUTH0_CALLBACK_URL" \n\
-echo "- PYTHONPATH: $PYTHONPATH" \n\
-echo "- VIRTUAL_ENV: $VIRTUAL_ENV" \n\
-\n\
-# Create assets directory if it doesn\'t exist \n\
-mkdir -p /app/assets \n\
-\n\
-# Start Nginx \n\
-echo "Starting Nginx..." \n\
-service nginx start \n\
-\n\
-# Start LiteFS and then the Dash app with Gunicorn config \n\
-echo "Starting LiteFS..." \n\
-litefs mount & \n\
-\n\
-echo "Starting Dash application..." \n\
-cd /app && gunicorn -c gunicorn.conf.py app:server \n\
-' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # Expose ports
 EXPOSE 80 8050

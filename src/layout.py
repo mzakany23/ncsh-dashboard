@@ -382,7 +382,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
 
                 dcc.Loading(
                     id="loading-performance-metrics",
-                    type="circle",
+                    type="default",
                     color="#20A7C9",
                     children=[
                         dbc.Row([
@@ -450,7 +450,9 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                 ),
 
                 # Performance trend chart
-                html.H4("Performance Over Time", className="section-header"),
+                html.Div([
+                    html.H4("Performance Over Time", className="section-header"),
+                ], className="section-header-container d-flex align-items-center"),
                 dcc.Loading(
                     id="loading-performance-chart",
                     type="default",
@@ -466,7 +468,9 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                 ),
 
                 # Goal statistics - with bar chart and pie chart side by side
-                html.H4("Goal Analysis", className="section-header"),
+                html.Div([
+                    html.H4("Goal Analysis", className="section-header"),
+                ], className="section-header-container d-flex align-items-center"),
                 dcc.Loading(
                     id="loading-goal-charts",
                     type="default",
@@ -491,7 +495,9 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                 # Opponent Analysis Section (conditionally displayed)
                 html.Div(
                     [
-                        html.H4("Opponent Analysis", className="section-header"),
+                        html.Div([
+                            html.H4("Opponent Analysis", className="section-header"),
+                        ], className="section-header-container d-flex align-items-center"),
                         dcc.Loading(
                             id="loading-opponent-analysis",
                             type="default",
@@ -532,7 +538,9 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                 ),
 
                 # Detailed match results
-                html.H4("Match Details", className="section-header"),
+                html.Div([
+                    html.H4("Match Details", className="section-header"),
+                ], className="section-header-container d-flex align-items-center"),
                 dcc.Loading(
                     id="loading-match-results",
                     type="default",

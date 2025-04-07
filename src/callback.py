@@ -26,7 +26,15 @@ from dash import callback, html, dcc, no_update
 import json
 import time
 from urllib.parse import parse_qs, urlencode
+import os
+import sys
+import logging
+from src.claude_summary import generate_summary
+import dash_bootstrap_components as dbc
+from src.logger import setup_logger
 
+# Set up logger
+logger = setup_logger(__name__)
 
 def init_callbacks(app, teams, team_groups_param, conn):
     # Make team_groups properly accessible as a global variable within all callbacks
@@ -80,9 +88,9 @@ def init_callbacks(app, teams, team_groups_param, conn):
 
         # Create date filter condition for SQL queries
         filter_conditions = f"date >= '{start_date}' AND date <= '{end_date}'"
-        print(f"Debug: Date range selected: {start_date} to {end_date}")
-        print(f"Debug: Selection type: {selection_type}, Team: {team}, Team Group: {team_group}")
-        print(f"Debug: Opponent filter: {opponent_filter_type}, Opponents: {opponent_selection}, Opponent Groups: {opponent_team_groups}")
+        logger.debug(f"Date range selected: {start_date} to {end_date}")
+        logger.debug(f"Selection type: {selection_type}, Team: {team}, Team Group: {team_group}")
+        logger.debug(f"Opponent filter: {opponent_filter_type}, Opponents: {opponent_selection}, Opponent Groups: {opponent_team_groups}")
 
         # Run debug queries to check data
         run_debug_queries(conn, filter_conditions)
@@ -146,9 +154,9 @@ def init_callbacks(app, teams, team_groups_param, conn):
         ORDER BY date
         """
         debug_2025_df = conn.execute(debug_2025_query).fetchdf()
-        print(f"Debug: Found {len(debug_2025_df)} games in 2025 before filtering")
+        logger.debug(f"Found {len(debug_2025_df)} games in 2025 before filtering")
         for _, row in debug_2025_df.iterrows():
-            print(f"Debug: 2025 Game - {row['date']} - {row['home_team']} vs {row['away_team']}")
+            logger.debug(f"2025 Game - {row['date']} - {row['home_team']} vs {row['away_team']}")
 
         # Debug query for team name variations
         debug_team_names_query = """
@@ -157,10 +165,10 @@ def init_callbacks(app, teams, team_groups_param, conn):
         SELECT DISTINCT away_team FROM soccer_data WHERE LOWER(away_team) LIKE '%k%w%' OR LOWER(away_team) LIKE '%key%'
         """
         debug_team_names_df = conn.execute(debug_team_names_query).fetchdf()
-        print(f"Debug: Possible Key West team name variations:")
+        logger.debug(f"Possible Key West team name variations:")
         for _, row in debug_team_names_df.iterrows():
             team_name = row[0]
-            print(f"Debug: Possible team name: {team_name}")
+            logger.debug(f"Possible team name: {team_name}")
 
     def get_team_match_data(conn, team, filter_conditions):
         """Get match data for the selected team."""
@@ -170,22 +178,22 @@ def init_callbacks(app, teams, team_groups_param, conn):
     def get_team_group_match_data(conn, group_name, filter_conditions):
         """Get match data for the selected team group."""
         if not group_name or group_name not in team_groups:
-            print(f"Debug: Team group '{group_name}' not found or empty")
+            logger.debug(f"Debug: Team group '{group_name}' not found or empty")
             return pd.DataFrame()  # Return an empty DataFrame
 
         # Get the teams in the group
         teams = team_groups.get(group_name, [])
         if not teams:
-            print(f"Debug: Team group '{group_name}' has no teams")
+            logger.debug(f"Debug: Team group '{group_name}' has no teams")
             return pd.DataFrame()  # Return an empty DataFrame
 
-        print(f"Debug: Getting matches for team group '{group_name}' with {len(teams)} teams: {teams}")
+        logger.debug(f"Debug: Getting matches for team group '{group_name}' with {len(teams)} teams: {teams}")
 
         # Generate and execute the query
         matches_query = get_team_group_matches_query(teams, filter_conditions)
 
         # Debug - log the query
-        print(f"Debug: Team group query first 200 chars: {matches_query[:200]}...")
+        logger.debug(f"Debug: Team group query first 200 chars: {matches_query[:200]}...")
 
         return conn.execute(matches_query).fetchdf()
 
@@ -211,9 +219,9 @@ def init_callbacks(app, teams, team_groups_param, conn):
             if not filtered_matches_df.empty:
                 filtered_matches_df = normalize_team_names_in_dataframe(filtered_matches_df)
                 filtered_matches_df = filter_matches_by_opponents(filtered_matches_df, opponent_selection)
-                print(f"Debug: Selected specific opponents: {opponent_selection}, found {len(filtered_matches_df)} matches")
+                logger.debug(f"Debug: Selected specific opponents: {opponent_selection}, found {len(filtered_matches_df)} matches")
             else:
-                print("Debug: No matches found in the initial dataset")
+                logger.debug("Debug: No matches found in the initial dataset")
 
         elif filter_type == 'team_groups' and opponent_team_groups and len(opponent_team_groups) > 0:
             # Filter to include only matches against opponents in selected team groups
@@ -231,14 +239,14 @@ def init_callbacks(app, teams, team_groups_param, conn):
                 if all_opponent_teams:
                     filtered_matches_df = normalize_team_names_in_dataframe(filtered_matches_df)
                     filtered_matches_df = filter_matches_by_opponents(filtered_matches_df, all_opponent_teams)
-                    print(f"Debug: Filtering by {len(all_opponent_teams)} teams from {len(opponent_team_groups)} team groups")
-                    print(f"Debug: Found {len(filtered_matches_df)} matches against teams in selected groups")
+                    logger.debug(f"Debug: Filtering by {len(all_opponent_teams)} teams from {len(opponent_team_groups)} team groups")
+                    logger.debug(f"Debug: Found {len(filtered_matches_df)} matches against teams in selected groups")
                 else:
                     # If no teams in the selected groups, return empty DataFrame
                     filtered_matches_df = pd.DataFrame(columns=filtered_matches_df.columns)
-                    print(f"Debug: No teams found in the selected team groups")
+                    logger.debug(f"Debug: No teams found in the selected team groups")
             else:
-                print("Debug: No matches found in the initial dataset")
+                logger.debug("Debug: No matches found in the initial dataset")
 
         elif filter_type == 'worthy':
             if not filtered_matches_df.empty:
@@ -247,7 +255,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
 
                 # If specific opponents are selected, these are our worthy opponents
                 if opponent_selection and len(opponent_selection) > 0 and '' not in opponent_selection:
-                    print(f"Debug: Using manually selected worthy opponents: {opponent_selection}")
+                    logger.debug(f"Debug: Using manually selected worthy opponents: {opponent_selection}")
                     worthy_opponents = opponent_selection
                 else:
                     # Auto-identify worthy opponents from the filtered dataset
@@ -258,31 +266,31 @@ def init_callbacks(app, teams, team_groups_param, conn):
                                      if 'key west' in str(team).lower() and team not in worthy_opponents]
 
                     if key_west_teams:
-                        print(f"Debug: Adding Key West teams as worthy opponents: {key_west_teams}")
+                        logger.debug(f"Debug: Adding Key West teams as worthy opponents: {key_west_teams}")
                         worthy_opponents.extend(key_west_teams)
 
-                    print(f"Debug: Auto-identified worthy opponents: {worthy_opponents}")
+                    logger.debug(f"Debug: Auto-identified worthy opponents: {worthy_opponents}")
 
                 # Now filter to matches against only the worthy opponents
                 if worthy_opponents:
                     # Use exact match on the original opponent names first, then fall back to normalized matching
-                    print(f"Debug: Filtering matches against worthy opponents: {worthy_opponents}")
+                    logger.debug(f"Debug: Filtering matches against worthy opponents: {worthy_opponents}")
 
                     # Use the improved filter_matches_by_opponents function
                     filtered_matches_df = filter_matches_by_opponents(filtered_matches_df, worthy_opponents)
 
-                    print(f"Debug: After filtering, found {len(filtered_matches_df)} matches against {len(worthy_opponents)} worthy opponents")
+                    logger.debug(f"Debug: After filtering, found {len(filtered_matches_df)} matches against {len(worthy_opponents)} worthy opponents")
                     # Print each opponent and the number of matches against them
                     if not filtered_matches_df.empty:
                         for opponent in worthy_opponents:
                             match_count = len(filtered_matches_df[filtered_matches_df['opponent_team'] == opponent])
-                            print(f"Debug: Found {match_count} matches against worthy opponent '{opponent}'")
+                            logger.debug(f"Debug: Found {match_count} matches against worthy opponent '{opponent}'")
                 else:
                     # No worthy opponents found
                     filtered_matches_df = pd.DataFrame(columns=filtered_matches_df.columns)
-                    print(f"Debug: No worthy opponents found with threshold {competitiveness_threshold}")
+                    logger.debug(f"Debug: No worthy opponents found with threshold {competitiveness_threshold}")
             else:
-                print("Debug: No matches found in the initial dataset")
+                logger.debug("Debug: No matches found in the initial dataset")
 
         # Remove the normalized_opponent column if it exists before further processing
         if 'normalized_opponent' in filtered_matches_df.columns:
@@ -291,9 +299,9 @@ def init_callbacks(app, teams, team_groups_param, conn):
         # Only hide opponent analysis if truly no data after filtering
         if len(filtered_matches_df) == 0:
             display_opponent_analysis = {'display': 'none'}
-            print("Debug: No matches after filtering, hiding opponent analysis")
+            logger.debug("Debug: No matches after filtering, hiding opponent analysis")
         else:
-            print(f"Debug: Found {len(filtered_matches_df)} matches after filtering, showing opponent analysis")
+            logger.debug(f"Debug: Found {len(filtered_matches_df)} matches after filtering, showing opponent analysis")
 
         return filtered_matches_df, display_opponent_analysis
 
@@ -1158,16 +1166,16 @@ def init_callbacks(app, teams, team_groups_param, conn):
             # Get all team groups for the dropdown with debug info
             cursor.execute("SELECT id, name FROM team_groups ORDER BY name")
             all_groups = cursor.fetchall()
-            print(f"Database contains {len(all_groups)} team groups: {all_groups}")
+            logger.debug(f"Database contains {len(all_groups)} team groups: {all_groups}")
 
             group_names = [group[1] for group in all_groups]
             group_options = [{'label': name, 'value': name} for name in group_names]
-            print(f"Refreshed edit-group-dropdown with {len(group_names)} options: {group_names}")
+            logger.debug(f"Refreshed edit-group-dropdown with {len(group_names)} options: {group_names}")
 
             # Update the global team_groups dictionary (important for consistency)
-            print(f"Updated global team_groups, now contains: {list(team_groups.keys())}")
+            logger.debug(f"Updated global team_groups, now contains: {list(team_groups.keys())}")
         except sqlite3.Error as e:
-            print(f"Error getting team groups: {str(e)}")
+            logger.error(f"Error getting team groups: {str(e)}")
             group_options = []
         finally:
             conn.close()
@@ -1177,7 +1185,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
             return [], group_options, ""
 
         # Query the database directly to get the team members
-        print(f"Retrieving team members for group '{group_name}'")
+        logger.debug(f"Retrieving team members for group '{group_name}'")
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -1188,7 +1196,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
             group_row = cursor.fetchone()
 
             if not group_row:
-                print(f"Group '{group_name}' not found in database")
+                logger.debug(f"Group '{group_name}' not found in database")
                 return [], group_options, ""
 
             group_id = group_row[0]
@@ -1197,10 +1205,10 @@ def init_callbacks(app, teams, team_groups_param, conn):
             cursor.execute("SELECT team_name FROM team_group_members WHERE group_id = ? ORDER BY team_name", (group_id,))
             teams = [row[0] for row in cursor.fetchall()]
 
-            print(f"Found {len(teams)} teams for group '{group_name}': {teams}")
+            logger.debug(f"Found {len(teams)} teams for group '{group_name}': {teams}")
             return teams, group_options, group_name
         except sqlite3.Error as e:
-            print(f"Error retrieving team members for group '{group_name}': {str(e)}")
+            logger.error(f"Error retrieving team members for group '{group_name}': {str(e)}")
             return [], group_options, ""
         finally:
             conn.close()
@@ -1231,11 +1239,11 @@ def init_callbacks(app, teams, team_groups_param, conn):
         ctx = callback_context
         triggered_id = ctx.triggered[0]['prop_id'].split('.')[0] if ctx.triggered else None
 
-        print(f"Team group management triggered by: {triggered_id}")
-        print(f"Current state - Create clicks: {create_clicks}, Update clicks: {update_clicks}, Delete clicks: {delete_clicks}")
-        print(f"Edit name: {edit_name}, New name: {edit_new_name}, Edit teams count: {len(edit_teams) if edit_teams else 0}")
-        print(f"Current group selection: {current_selection}")
-        print(f"BEFORE OPERATION: Global team_groups contains {len(team_groups)} groups: {list(team_groups.keys())}")
+        logger.debug(f"Team group management triggered by: {triggered_id}")
+        logger.debug(f"Current state - Create clicks: {create_clicks}, Update clicks: {update_clicks}, Delete clicks: {delete_clicks}")
+        logger.debug(f"Edit name: {edit_name}, New name: {edit_new_name}, Edit teams count: {len(edit_teams) if edit_teams else 0}")
+        logger.debug(f"Current group selection: {current_selection}")
+        logger.debug(f"BEFORE OPERATION: Global team_groups contains {len(team_groups)} groups: {list(team_groups.keys())}")
 
         # Default return values
         status = ""
@@ -1252,7 +1260,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
                 status = f"Team group '{new_name}' created successfully!"
                 # Refresh team groups after successful creation
                 team_groups = get_team_groups()
-                print(f"AFTER CREATE: Global team_groups refreshed, now contains {len(team_groups)} groups: {list(team_groups.keys())}")
+                logger.debug(f"AFTER CREATE: Global team_groups refreshed, now contains {len(team_groups)} groups: {list(team_groups.keys())}")
                 selected_group = new_name  # Auto-select newly created group
             else:
                 status = f"Failed to create team group '{new_name}'. It may already exist."
@@ -1274,17 +1282,17 @@ def init_callbacks(app, teams, team_groups_param, conn):
 
                 # Refresh team groups after successful update
                 team_groups = get_team_groups()
-                print(f"AFTER UPDATE: Global team_groups refreshed, now contains {len(team_groups)} groups: {list(team_groups.keys())}")
+                logger.debug(f"AFTER UPDATE: Global team_groups refreshed, now contains {len(team_groups)} groups: {list(team_groups.keys())}")
             else:
                 status = f"Failed to update team group '{edit_name}'."
 
         elif triggered_id == 'delete-group-button':
             # Validate the input for deletion
             if not edit_name:
-                print("Delete operation failed: No team group selected")
+                logger.debug("Delete operation failed: No team group selected")
                 status = "Delete failed: No team group selected"
             else:
-                print(f"Attempting to delete team group: {edit_name}")
+                logger.debug(f"Attempting to delete team group: {edit_name}")
                 # Delete a team group
                 if delete_team_group(edit_name):
                     status = f"Team group '{edit_name}' deleted successfully!"
@@ -1295,22 +1303,22 @@ def init_callbacks(app, teams, team_groups_param, conn):
 
                     # Refresh team groups after deletion
                     team_groups = get_team_groups()
-                    print(f"AFTER DELETE: Global team_groups refreshed, now contains {len(team_groups)} groups: {list(team_groups.keys())}")
+                    logger.debug(f"AFTER DELETE: Global team_groups refreshed, now contains {len(team_groups)} groups: {list(team_groups.keys())}")
 
                     # Clear the current selection if it was the deleted group
                     if current_selection == edit_name:
                         # Select another group if available, otherwise set to None
                         if team_groups:
                             selected_group = next(iter(team_groups.keys()))
-                            print(f"Selected new group: {selected_group}")
+                            logger.debug(f"Selected new group: {selected_group}")
                         else:
                             selected_group = None
-                            print("No groups available after deletion")
+                            logger.debug("No groups available after deletion")
                 else:
                     status = f"Failed to delete team group '{edit_name}'."
 
         # Update dropdown options for team group dropdown
-        print(f"Updating team group dropdown with team groups: {list(team_groups.keys())}")
+        logger.debug(f"Updating team group dropdown with team groups: {list(team_groups.keys())}")
 
         # Instead of relying only on the global variable, also query the database directly
         # to ensure complete consistency across all dropdowns
@@ -1319,10 +1327,10 @@ def init_callbacks(app, teams, team_groups_param, conn):
         try:
             cursor.execute("SELECT name FROM team_groups ORDER BY name")
             db_group_names = [row[0] for row in cursor.fetchall()]
-            print(f"Direct database query shows {len(db_group_names)} groups: {db_group_names}")
+            logger.debug(f"Direct database query shows {len(db_group_names)} groups: {db_group_names}")
             team_group_options = [{'label': group_name, 'value': group_name} for group_name in db_group_names]
         except sqlite3.Error as e:
-            print(f"Error querying team groups for dropdown: {str(e)}")
+            logger.error(f"Error querying team groups for dropdown: {str(e)}")
             # Fall back to using the global variable if database query fails
             team_group_options = [{'label': group_name, 'value': group_name} for group_name in team_groups.keys()]
         finally:
@@ -1332,12 +1340,12 @@ def init_callbacks(app, teams, team_groups_param, conn):
         if selected_group and selected_group not in db_group_names:
             if db_group_names:
                 selected_group = db_group_names[0]
-                print(f"Selected group not found, defaulting to: {selected_group}")
+                logger.debug(f"Selected group not found, defaulting to: {selected_group}")
             else:
                 selected_group = None
-                print("No groups available, setting selection to None")
+                logger.debug("No groups available, setting selection to None")
 
-        print(f"Final selected group: {selected_group}")
+        logger.debug(f"Final selected group: {selected_group}")
         return status, new_name_value, new_teams_value, team_group_options, selected_group
 
     # Callback to update URL when team group selection changes
@@ -1350,7 +1358,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
     )
     def update_url_team_group(selected_team_group, selection_type, current_search):
         """Update URL with team group selection"""
-        print(f"Debug: Updating URL with team group={selected_team_group}, selection_type={selection_type}")
+        logger.debug(f"Debug: Updating URL with team group={selected_team_group}, selection_type={selection_type}")
 
         # Only update for team group selection type
         if selection_type != 'group' or not selected_team_group:
@@ -1364,7 +1372,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
 
         # Return updated query string
         updated_search = '?' + urlencode(query_params, doseq=True)
-        print(f"Debug: Updated URL search to {updated_search}")
+        logger.debug(f"Debug: Updated URL search to {updated_search}")
         return updated_search
 
     # Callback to set team dropdown selection based on URL
@@ -1377,7 +1385,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
     )
     def set_team_from_url(search, team_group_options):
         """Set team selection from URL parameters"""
-        print(f"Debug: Setting team from URL search: {search}")
+        logger.debug(f"Debug: Setting team from URL search: {search}")
 
         # Check if team_group parameter exists in URL
         if search and search.startswith('?'):
@@ -1391,13 +1399,13 @@ def init_callbacks(app, teams, team_groups_param, conn):
                 # Verify it's a valid option
                 available_groups = [opt['value'] for opt in team_group_options]
                 if team_group in available_groups:
-                    print(f"Debug: Setting team group to {team_group} from URL")
+                    logger.debug(f"Debug: Setting team group to {team_group} from URL")
                     return team_group, 'group'
 
         # If URL parameter not present or not valid, set default (first alphabetical)
         if team_group_options:
             default_group = team_group_options[0]['value']
-            print(f"Debug: Setting default team group to {default_group}")
+            logger.debug(f"Debug: Setting default team group to {default_group}")
             return default_group, 'group'
 
         # If no options available, don't update
@@ -1423,14 +1431,14 @@ def init_callbacks(app, teams, team_groups_param, conn):
             # Filter out the currently selected team group when in Team Group mode
             if selection_type == 'group' and current_team_group:
                 group_names = [name for name in all_group_names if name != current_team_group]
-                print(f"Updating opponent team groups dropdown with {len(group_names)} groups (excluded {current_team_group})")
+                logger.debug(f"Updating opponent team groups dropdown with {len(group_names)} groups (excluded {current_team_group})")
             else:
                 group_names = all_group_names
-                print(f"Updating opponent team groups dropdown with all {len(group_names)} groups")
+                logger.debug(f"Updating opponent team groups dropdown with all {len(group_names)} groups")
 
             return [{'label': name, 'value': name} for name in group_names]
         except sqlite3.Error as e:
-            print(f"Error querying team groups for opponent dropdown: {str(e)}")
+            logger.error(f"Error querying team groups for opponent dropdown: {str(e)}")
             # Fall back to the global variable, but still filter out current selection
             if selection_type == 'group' and current_team_group:
                 group_names = [name for name in team_groups.keys() if name != current_team_group]
@@ -1464,7 +1472,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
             if selection_type == 'group' and current_team_group and current_selection:
                 if isinstance(current_selection, list) and current_team_group in current_selection:
                     new_selection = [group for group in current_selection if group != current_team_group]
-                    print(f"Removed {current_team_group} from opponent team groups selection")
+                    logger.debug(f"Removed {current_team_group} from opponent team groups selection")
                     return new_selection
 
         # Otherwise, just return the current selection unchanged
@@ -1586,9 +1594,8 @@ def init_callbacks(app, teams, team_groups_param, conn):
             ])
 
             # Generate the summary using Claude
-            print(f"Calling Claude API for summary generation for team: {selected_team}")
-            import os
-            print(f"ANTHROPIC_API_KEY set: {bool(os.getenv('ANTHROPIC_API_KEY'))}")
+            logger.debug(f"Calling Claude API for summary generation for team: {selected_team}")
+            logger.debug(f"ANTHROPIC_API_KEY set: {bool(os.getenv('ANTHROPIC_API_KEY'))}")
 
             summary_markdown = generate_summary(
                 selected_team=selected_team,
@@ -1601,7 +1608,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
 
             # If we get an error message back
             if isinstance(summary_markdown, str) and summary_markdown.startswith("**Error:**"):
-                print(f"Error message received: {summary_markdown}")
+                logger.error(f"Error message received: {summary_markdown}")
                 return html.Div([
                     html.P("Error generating AI analysis:"),
                     html.P(summary_markdown)
@@ -1613,8 +1620,8 @@ def init_callbacks(app, teams, team_groups_param, conn):
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
-            print(f"Error generating AI summary: {str(e)}")
-            print(error_trace)
+            logger.error(f"Error generating AI summary: {str(e)}")
+            logger.error(error_trace)
 
             return html.Div([
                 html.P("Error generating AI analysis:"),

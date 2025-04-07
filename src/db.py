@@ -109,9 +109,59 @@ def init_team_db():
     )
     ''')
 
-    # Commit the changes and close the connection
+    # Commit the changes
     conn.commit()
+
+    # Check if we need to create default team groups
+    cursor.execute("SELECT COUNT(*) FROM team_groups")
+    group_count = cursor.fetchone()[0]
+
+    if group_count == 0:
+        print("No team groups found in database, creating default groups")
+        create_default_team_groups(conn)
+    else:
+        print(f"Found {group_count} existing team groups, skipping default creation")
+
+    # Close the connection
     conn.close()
+
+
+def create_default_team_groups(conn):
+    """Create default team groups if none exist."""
+    try:
+        # Define default team groups
+        default_groups = {
+            "Top Teams": ["Real Madrid", "Barcelona", "Bayern Munich", "Manchester City", "Liverpool"],
+            "NC Teams": ["Charlotte FC", "North Carolina FC", "NC Courage"],
+            "Premier League": ["Manchester City", "Liverpool", "Chelsea", "Arsenal", "Tottenham", "Manchester United"]
+        }
+
+        cursor = conn.cursor()
+
+        # Begin transaction
+        conn.execute("BEGIN TRANSACTION")
+
+        for group_name, teams in default_groups.items():
+            print(f"Creating default team group: {group_name} with {len(teams)} teams")
+
+            # Create the team group
+            cursor.execute("INSERT INTO team_groups (name) VALUES (?)", (group_name,))
+            group_id = cursor.lastrowid
+
+            # Add team members
+            for team in teams:
+                cursor.execute(
+                    "INSERT INTO team_group_members (group_id, team_name) VALUES (?, ?)",
+                    (group_id, team)
+                )
+
+        # Commit the changes
+        conn.commit()
+        print("Successfully created default team groups")
+
+    except sqlite3.Error as e:
+        conn.rollback()
+        print(f"Error creating default team groups: {str(e)}")
 
 
 def get_db_connection():

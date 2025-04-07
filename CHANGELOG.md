@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Standardized loading spinner styles across all dashboard components
 - Fixed section header spacing and alignment issues
 - Fixed deployment issue with LiteFS volume mount by adding backup data directory
+- Added automatic creation of default team groups when database is empty
 
 ## [1.1.2] - 2025-04-06
 

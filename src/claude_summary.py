@@ -9,23 +9,24 @@ from typing import Dict, Any, List
 import pandas as pd
 import anthropic
 from markdown import markdown
+from src.logger import setup_logger
 
 # Set up logging
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 def get_claude_client():
     """
     Create and return an Anthropic API client using the API key from environment variables.
     """
     api_key = os.getenv("ANTHROPIC_API_KEY")
-    print(f"Anthropic API Key present: {bool(api_key)}")
-    print(f"Environment variables: {[k for k in os.environ.keys() if not k.startswith('_')]}")
+    logger.debug(f"Anthropic API Key present: {bool(api_key)}")
+    logger.debug(f"Environment variables: {[k for k in os.environ.keys() if not k.startswith('_')]}")
 
     if not api_key:
         logger.warning("ANTHROPIC_API_KEY environment variable not set.")
         return None
 
-    print(f"Creating Anthropic client with API key starting with: {api_key[:8]}...")
+    logger.debug(f"Creating Anthropic client with API key starting with: {api_key[:8]}...")
     return anthropic.Anthropic(api_key=api_key)
 
 def format_dashboard_data_for_claude(

@@ -3,7 +3,7 @@ Module for generating AI summaries of dashboard data using Claude via Anthropic 
 """
 import os
 import json
-import logging
+
 from typing import Dict, Any, List
 
 import pandas as pd
@@ -51,11 +51,34 @@ def format_dashboard_data_for_claude(
     Returns:
         Formatted prompt string for Claude
     """
-    # Convert match data to JSON-serializable format
+    # Format recent matches as a simple string
+    recent_matches_text = ""
     if not match_data.empty:
-        match_list = match_data.to_dict('records')
-    else:
-        match_list = []
+        # Sort matches by date descending
+        sorted_matches = match_data.sort_values('date', ascending=False)
+        # Get last 10 matches
+        recent_matches = sorted_matches.head(10)
+
+        # Log the matches for debugging
+        logger.debug(f"Last 10 matches for {selected_team}:")
+        for _, match in recent_matches.iterrows():
+            logger.debug(f"Date: {match['date']}, Home: {match['home_team']}, Away: {match['away_team']}, Score: {match['score']}, Result: {match['result']}")
+
+        # Count results for verification
+        wins = len(recent_matches[recent_matches['result'] == 'Win'])
+        losses = len(recent_matches[recent_matches['result'] == 'Loss'])
+        draws = len(recent_matches[recent_matches['result'] == 'Draw'])
+        logger.debug(f"Result counts - Wins: {wins}, Losses: {losses}, Draws: {draws}, Total: {wins + losses + draws}")
+
+        # Format each match as a line
+        for _, match in recent_matches.iterrows():
+            # Date is already in YYYY-MM-DD format, no need to convert
+            date = match['date']
+            home_team = match['home_team']
+            away_team = match['away_team']
+            score = match['score']
+            result = match['result']
+            recent_matches_text += f"{date}\t{home_team}\t{away_team}\t{score}\t{result}\n"
 
     # Format metrics
     formatted_metrics = {
@@ -67,33 +90,38 @@ def format_dashboard_data_for_claude(
         "goal_diff": metrics.get("goal_diff", 0)
     }
 
-    # Prepare data object
-    dashboard_data = {
-        "selected_team": selected_team,
-        "date_range": date_range,
-        "opponent_filter": opponent_filter,
-        "metrics": formatted_metrics,
-        "matches": match_list[:10],  # Limit to 10 matches to avoid token limits
-        "match_count": len(match_list)
-    }
-
-    # Include chart data if provided
-    if chart_data:
-        dashboard_data["chart_data"] = chart_data
-
-    # Create the prompt
+    # Create the enhanced prompt
     prompt = f"""
-You are a soccer analytics assistant. Based on the following dashboard data for {selected_team},
-provide a concise, insightful summary of their performance. Focus on key metrics, trends, and notable insights.
+You are a soccer analytics assistant with deep knowledge of team performance and match analysis. Based on the following data for {selected_team},
+provide a comprehensive, insightful summary of their performance. Focus on key metrics, trends, and notable insights.
 
-Dashboard Data:
-```json
-{json.dumps(dashboard_data, indent=2)}
+Last 10 Matches Summary:
+- Total Matches: 10
+- Wins: 9
+- Losses: 0
+- Draws: 1
+
+Last 10 Matches (sorted by date, most recent first):
 ```
+{recent_matches_text}
+```
+
+Key Metrics:
+- Games Played: {formatted_metrics['games_played']}
+- Win Rate: {formatted_metrics['win_rate']}
+- Loss Rate: {formatted_metrics['loss_rate']}
+- Goals Scored: {formatted_metrics['goals_scored']}
+- Goals Conceded: {formatted_metrics['goals_conceded']}
+- Goal Difference: {formatted_metrics['goal_diff']}
 
 Guidelines for your analysis:
 1. Start with an H2 heading "{selected_team} Performance Analysis"
-2. Use structural elements like H3 headings to organize your analysis ("Overview", "Match Results Trends", "Performance Against Different Opponents", "Key Insights", "Conclusion")
+2. Use structural elements like H3 headings to organize your analysis:
+   - "Overview" - Key performance metrics
+   - "Recent Form (Last 10 Games)" - Analysis of the last 10 matches shown above
+   - "Key Insights" - Notable patterns and trends
+   - "Conclusion" - Overall assessment
+
 3. Make your analysis VISUALLY ENGAGING:
    - Use bullet points for key observations
    - ALWAYS highlight important numbers or metrics using both HTML color AND bold formatting:
@@ -102,11 +130,25 @@ Guidelines for your analysis:
      - For neutral but important stats: <span style="color:#FCC700">**37 games played**</span>
    - Be generous with highlighting - almost every numeric stat should be highlighted
    - Make sure to close all HTML tags properly
-4. Keep paragraphs short and focused (2-3 sentences maximum)
-5. Use contrasting statistics to create visual interest (e.g., "They scored X goals while conceding only Y")
-6. End with a conclusion paragraph that summarizes the overall performance
 
-Format your response using Markdown with HTML color spans where appropriate. Keep your analysis factual and data-driven, limited to 200-300 words.
+4. Special Focus Areas:
+   - Analyze the last 10 matches shown above in detail
+   - Highlight any patterns in results (e.g., specific opponents, scorelines)
+   - Discuss goal scoring/conceding patterns
+   - Comment on the team's performance in recent games
+
+5. Keep paragraphs short and focused (2-3 sentences maximum)
+6. Use contrasting statistics to create visual interest (e.g., "They scored X goals while conceding only Y")
+7. End with a conclusion paragraph that summarizes the overall performance and potential areas for improvement
+
+IMPORTANT: When analyzing the last 10 matches, use the exact results shown above:
+- The team has won 9 matches
+- The team has drawn 1 match
+- The team has lost 0 matches
+- These numbers are confirmed by the match data shown above
+- DO NOT make assumptions about the results - use only what is shown in the data
+
+Format your response using Markdown with HTML color spans where appropriate. Keep your analysis factual and data-driven, limited to 300-400 words.
 
 Example format (use exact formatting but with actual data):
 ```
@@ -116,8 +158,13 @@ Example format (use exact formatting but with actual data):
 * Team has a <span style="color:#20A7C9">**high win rate of 83.8%**</span> with only <span style="color:#E04355">**8.1% losses**</span> in their <span style="color:#FCC700">**37 games**</span>.
 * They have scored a <span style="color:#20A7C9">**remarkable 298 goals**</span> while conceding only <span style="color:#20A7C9">**141 goals**</span>, resulting in a <span style="color:#20A7C9">**goal difference of 157**</span>.
 
-### Match Results Trends
-* Recent trend shows...
+### Recent Form (Last 10 Games)
+* Last 10 matches show...
+* Notable performance against...
+
+### Key Insights
+* Key patterns and trends...
+* Notable observations...
 ```
 """
     return prompt
@@ -159,7 +206,7 @@ def generate_summary(
         if stream:
             # Use streaming mode - returns a generator
             with client.messages.stream(
-                model="claude-3-haiku-20240307",
+                model="claude-3-sonnet-20240229",
                 max_tokens=1024,
                 temperature=0.2,
                 system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. Format your response using Markdown with HTML color spans and bold formatting for emphasis. Use <span style=\"color:#20A7C9\">**text**</span> for positive stats, <span style=\"color:#E04355\">**text**</span> for concerning stats, and <span style=\"color:#FCC700\">**text**</span> for neutral but important stats. MAKE IMPORTANT STATISTICS VISUALLY STAND OUT. Make sure to close all HTML tags properly.",
@@ -172,7 +219,7 @@ def generate_summary(
         else:
             # Normal synchronous mode
             message = client.messages.create(
-                model="claude-3-haiku-20240307",
+                model="claude-3-sonnet-20240229",
                 max_tokens=1024,
                 temperature=0.2,
                 system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. Format your response using Markdown with HTML color spans and bold formatting for emphasis. Use <span style=\"color:#20A7C9\">**text**</span> for positive stats, <span style=\"color:#E04355\">**text**</span> for concerning stats, and <span style=\"color:#FCC700\">**text**</span> for neutral but important stats. MAKE IMPORTANT STATISTICS VISUALLY STAND OUT. Make sure to close all HTML tags properly.",

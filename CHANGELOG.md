@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.2] - 2025-04-07
+## [1.1.3] - 2025-04-07
 
 ### Fixed
 - Improved UI consistency across dashboard sections
@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Standardized loading spinner styles across all dashboard components
 - Fixed section header spacing and alignment issues
 - Fixed deployment issue with LiteFS volume mount by adding backup data directory
+
+## [1.1.2] - 2025-04-06
+
+### Fixed
+- Fixed duplicate callback issue in URL-based team group selection
+- Added `prevent_initial_call='initial_duplicate'` to resolve conflicts between callbacks
+- Improved team group persistence across page refreshes by prioritizing URL state
+- Fixed spinner behavior for loading states
 
 ## [1.1.1] - 2025-04-06
 

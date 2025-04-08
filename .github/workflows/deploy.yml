@@ -74,6 +74,7 @@ jobs:
     permissions:
       id-token: write
       contents: write
+      workflows: write
     steps:
       - uses: actions/checkout@v4
         with:

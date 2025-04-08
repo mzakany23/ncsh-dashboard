@@ -37,13 +37,27 @@ if [ -d "/app/data" ]; then
   if [ -f "/app/data/team_groups.db" ]; then
     echo "Database file exists, size: $(stat -c%s /app/data/team_groups.db) bytes"
     echo "File permissions: $(stat -c%a /app/data/team_groups.db)"
+
+    # If the database in the volume exists but has no team groups, and we have a backup, use that instead
+    if [ -f "$BACKUP_DATA_DIR/team_groups.db" ]; then
+      size_volume=$(stat -c%s "/app/data/team_groups.db")
+      size_backup=$(stat -c%s "$BACKUP_DATA_DIR/team_groups.db")
+
+      # If the backup is significantly larger, it probably has actual team groups
+      if [ $size_backup -gt $((size_volume + 1000)) ]; then
+        echo "Backup database is larger than volume database, copying backup over volume"
+        cp "$BACKUP_DATA_DIR/team_groups.db" "/app/data/team_groups.db"
+        chmod 644 "/app/data/team_groups.db"
+      fi
+    fi
+
     chmod 644 /app/data/team_groups.db
   else
     echo "Database file does not exist in mounted volume"
     if [ -f "$BACKUP_DATA_DIR/team_groups.db" ]; then
       echo "Copying database from backup"
       cp "$BACKUP_DATA_DIR/team_groups.db" "/app/data/team_groups.db"
-      chmod 644 /app/data/team_groups.db
+      chmod 644 "/app/data/team_groups.db"
     else
       echo "Database file will be created during initialization"
     fi

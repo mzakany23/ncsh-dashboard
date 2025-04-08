@@ -8,8 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.4] - 2025-04-07
 
 ### Fixed
-- Fixed default team groups to use actual teams from the dataset
-- Improved team filtering accuracy in group selection
+- Fixed team groups persistence in LiteFS volume
+- Removed unnecessary team group initialization code
+- Improved UI consistency across dashboard sections
+- Added consistent horizontal rules under all section headers
+- Standardized loading spinner styles across all dashboard components
+- Fixed section header spacing and alignment issues
+- Fixed deployment issue with LiteFS volume mount by adding backup data directory
 
 ## [1.1.3] - 2025-04-07
 

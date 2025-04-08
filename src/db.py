@@ -129,11 +129,46 @@ def init_team_db():
 def create_default_team_groups(conn):
     """Create default team groups if none exist."""
     try:
-        # Define default team groups
+        # First, get a list of actual teams from the DuckDB/parquet file
+        parquet_file = os.environ.get('PARQUET_FILE', '/app/data/data.parquet')
+        print(f"Getting actual teams from {parquet_file}")
+
+        # Connect to DuckDB to get actual teams
+        try:
+            ddb_conn = duckdb.connect(database=':memory:')
+            ddb_conn.execute(f"CREATE OR REPLACE TABLE soccer_data AS SELECT * FROM '{parquet_file}'")
+            teams_query = """
+            SELECT DISTINCT home_team AS team FROM soccer_data
+            UNION
+            SELECT DISTINCT away_team AS team FROM soccer_data
+            ORDER BY team
+            """
+            teams_df = ddb_conn.execute(teams_query).fetchdf()
+            all_teams = teams_df['team'].tolist()
+            print(f"Found {len(all_teams)} actual teams in the dataset")
+        except Exception as e:
+            print(f"Error retrieving teams from parquet: {str(e)}")
+            # Fallback to a minimal set of likely teams if we can't get actual teams
+            all_teams = ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5"]
+            print(f"Using fallback teams: {all_teams}")
+
+        # Get the first 5 teams for the "Popular" group
+        top_teams = all_teams[:5] if len(all_teams) >= 5 else all_teams
+
+        # Get teams 6-10 for the "Challengers" group
+        challenger_teams = all_teams[5:10] if len(all_teams) >= 10 else all_teams[:5]
+
+        # Create one more group with top 3 and bottom 3 for "Mixed" group
+        if len(all_teams) >= 6:
+            mixed_teams = all_teams[:3] + all_teams[-3:]
+        else:
+            mixed_teams = all_teams
+
+        # Define dynamic team groups using actual teams
         default_groups = {
-            "Top Teams": ["Real Madrid", "Barcelona", "Bayern Munich", "Manchester City", "Liverpool"],
-            "NC Teams": ["Charlotte FC", "North Carolina FC", "NC Courage"],
-            "Premier League": ["Manchester City", "Liverpool", "Chelsea", "Arsenal", "Tottenham", "Manchester United"]
+            "Popular Teams": top_teams,
+            "Challenger Teams": challenger_teams,
+            "Mixed Teams": mixed_teams
         }
 
         cursor = conn.cursor()
@@ -142,7 +177,7 @@ def create_default_team_groups(conn):
         conn.execute("BEGIN TRANSACTION")
 
         for group_name, teams in default_groups.items():
-            print(f"Creating default team group: {group_name} with {len(teams)} teams")
+            print(f"Creating default team group: {group_name} with {len(teams)} teams: {teams}")
 
             # Create the team group
             cursor.execute("INSERT INTO team_groups (name) VALUES (?)", (group_name,))
@@ -162,6 +197,9 @@ def create_default_team_groups(conn):
     except sqlite3.Error as e:
         conn.rollback()
         print(f"Error creating default team groups: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error creating default team groups: {str(e)}")
+        conn.rollback()
 
 
 def get_db_connection():

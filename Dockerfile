@@ -51,6 +51,7 @@ RUN mkdir -p /app/backup_data && chmod 755 /app/backup_data
 COPY gunicorn.conf.py .
 COPY app.py .
 COPY src /app/src
+COPY scripts /app/scripts
 COPY litefs.yml /etc/litefs.yml
 COPY data/data.parquet /app/data/data.parquet
 COPY data/team_groups.db /app/data/team_groups.db

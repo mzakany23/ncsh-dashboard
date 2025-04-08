@@ -33,33 +33,29 @@ if [ -d "/app/data" ]; then
   # Ensure data directory has correct permissions
   chmod 755 /app/data
 
-  # Check if database exists, if not copy from backup
+  # Handle team_groups.db: Merge if both exist, otherwise use backup if available
   if [ -f "/app/data/team_groups.db" ]; then
-    echo "Database file exists, size: $(stat -c%s /app/data/team_groups.db) bytes"
+    echo "Database file exists in mounted volume, size: $(stat -c%s /app/data/team_groups.db) bytes"
     echo "File permissions: $(stat -c%a /app/data/team_groups.db)"
 
-    # If the database in the volume exists but has no team groups, and we have a backup, use that instead
     if [ -f "$BACKUP_DATA_DIR/team_groups.db" ]; then
-      size_volume=$(stat -c%s "/app/data/team_groups.db")
-      size_backup=$(stat -c%s "$BACKUP_DATA_DIR/team_groups.db")
+      echo "Backup database found, size: $(stat -c%s $BACKUP_DATA_DIR/team_groups.db) bytes"
+      echo "Merging team groups from backup database (S3 version) to volume database"
+      python /app/scripts/merge_team_groups.py "/app/data/team_groups.db" "$BACKUP_DATA_DIR/team_groups.db"
 
-      # If the backup is significantly larger, it probably has actual team groups
-      if [ $size_backup -gt $((size_volume + 1000)) ]; then
-        echo "Backup database is larger than volume database, copying backup over volume"
-        cp "$BACKUP_DATA_DIR/team_groups.db" "/app/data/team_groups.db"
-        chmod 644 "/app/data/team_groups.db"
-      fi
+      # Ensure appropriate permissions
+      chmod 644 "/app/data/team_groups.db"
+    else
+      echo "No backup database found, using existing volume database"
     fi
-
-    chmod 644 /app/data/team_groups.db
   else
     echo "Database file does not exist in mounted volume"
     if [ -f "$BACKUP_DATA_DIR/team_groups.db" ]; then
-      echo "Copying database from backup"
+      echo "Copying database from backup (S3 version)"
       cp "$BACKUP_DATA_DIR/team_groups.db" "/app/data/team_groups.db"
       chmod 644 "/app/data/team_groups.db"
     else
-      echo "Database file will be created during initialization"
+      echo "WARNING: No database file found in backup. A new empty database will be created."
     fi
   fi
 

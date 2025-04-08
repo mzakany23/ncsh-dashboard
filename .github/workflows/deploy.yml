@@ -4,6 +4,16 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'CHANGELOG.md'
+      - 'pyproject.toml'
+      - 'src/**'
+      - 'app.py'
+      - 'data/**'
+      - 'Dockerfile'
+      - 'entrypoint.sh'
+      # Exclude workflow files themselves to prevent circular builds
+      - '!.github/workflows/**'
   workflow_dispatch:
 
 env:

@@ -37,6 +37,24 @@ ncsh-dashboard/
 3. Run `docker-compose up --build`
 4. Access the dashboard at http://localhost:8090
 
+### Local Development with Tilt
+
+For a faster development workflow with live reloading, you can use Tilt:
+
+1.  **Install Tilt:** Follow the instructions on the [Tilt website](https://docs.tilt.dev/install.html) to install Tilt.
+2.  **Ensure Docker Desktop is running.**
+3.  **Run Tilt:** In the project's root directory, run the command:
+    ```bash
+    tilt up
+    ```
+4.  **Access the application:** Tilt will build the services and provide URLs in the terminal. Typically:
+    *   Analytics Dashboard: http://localhost:8050
+    *   (If applicable, add other service URLs provided by Tilt)
+5.  Tilt will automatically rebuild and update the services when you save changes to the watched files (configured in `Tiltfile`).
+6.  To stop the development environment, press `Ctrl+C` in the terminal where Tilt is running.
+
+---
+
 ### Environment Variables
 
 You can customize the application using these environment variables:

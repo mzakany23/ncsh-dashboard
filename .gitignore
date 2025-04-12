@@ -38,3 +38,16 @@ terraform.tfstate
 terraform.tfstate.backup
 *.tfvars
 *.tfvars.json
+
+# Aider
+.aider*
+.aider.chat.history.md
+.aider.code.instructions.md
+.aider.commands.log
+.aider.conf.yml
+.aider.debug.log
+.aider.input.history
+.aider.last_input.txt
+.aider.prompts.log
+.aider.tags.cache.json
+.aider.transcript.txt

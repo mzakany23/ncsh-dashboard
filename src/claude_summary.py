@@ -70,8 +70,15 @@ def format_dashboard_data_for_claude(
         draws = len(recent_matches[recent_matches['result'] == 'Draw'])
         logger.debug(f"Result counts - Wins: {wins}, Losses: {losses}, Draws: {draws}, Total: {wins + losses + draws}")
 
-        # Format each match as a line
-        for _, match in recent_matches.iterrows():
+    else:
+        # Handle case where there are fewer than 10 matches or no matches
+        recent_matches = pd.DataFrame() # Ensure it's an empty DataFrame
+        wins = 0
+        losses = 0
+        draws = 0
+
+    # Format each match as a line for the detailed list
+    for _, match in recent_matches.iterrows():
             # Date is already in YYYY-MM-DD format, no need to convert
             date = match['date']
             home_team = match['home_team']
@@ -95,13 +102,13 @@ def format_dashboard_data_for_claude(
 You are a soccer analytics assistant with deep knowledge of team performance and match analysis. Based on the following data for {selected_team},
 provide a comprehensive, insightful summary of their performance. Focus on key metrics, trends, and notable insights.
 
-Last 10 Matches Summary:
-- Total Matches: 10
-- Wins: 9
-- Losses: 0
-- Draws: 1
+Last {len(recent_matches)} Matches Summary:
+- Total Matches: {len(recent_matches)}
+- Wins: {wins}
+- Losses: {losses}
+- Draws: {draws}
 
-Last 10 Matches (sorted by date, most recent first):
+Last {len(recent_matches)} Matches (sorted by date, most recent first):
 ```
 {recent_matches_text}
 ```

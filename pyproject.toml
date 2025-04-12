@@ -18,6 +18,7 @@ dependencies = [
     "python-dotenv",
     "anthropic",
     "markdown",
+    "sentry-sdk",
 ]
 
 [build-system]

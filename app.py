@@ -13,6 +13,7 @@ import sys
 import dash
 import dash_bootstrap_components as dbc
 import flask
+import sentry_sdk
 
 from src.style import init_style
 from src.layout import init_layout
@@ -21,6 +22,20 @@ from src.callback import init_callbacks
 from src.auth import Auth0Auth
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Initialize Sentry only in production environments
+environment = os.environ.get('ENVIRONMENT', 'development')
+if environment.lower() == 'production':
+    sentry_sdk.init(
+        dsn="https://b635a509b62f73bbbd9a0cb34eb0aa22@o4509141099020288.ingest.us.sentry.io/4509141099347968",
+        # Set traces_sample_rate to 1.0 to capture 100% of transactions for performance monitoring.
+        # We recommend adjusting this value in production.
+        traces_sample_rate=0.5,
+        environment=environment,
+    )
+    print(f"Sentry initialized in {environment} environment")
+else:
+    print(f"Sentry disabled in {environment} environment")
 
 # Update path to point to absolute path
 PARQUET_FILE = os.environ.get('PARQUET_FILE',
@@ -45,11 +60,15 @@ try:
         print(f"Initial load: Found {len(team_groups)} team groups with keys: {list(team_groups.keys())}")
     except Exception as e:
         print(f"Error during initial team_groups load: {str(e)}")
+        if environment.lower() == 'production':
+            sentry_sdk.capture_exception(e)
         team_groups = {}
 
     min_date, max_date = get_date_range(conn)
 except Exception as e:
     print(f"Critical error during initialization: {str(e)}")
+    if environment.lower() == 'production':
+        sentry_sdk.capture_exception(e)
     raise
 
 custom_css = init_style()

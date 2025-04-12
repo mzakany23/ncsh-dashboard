@@ -1,8 +1,9 @@
 from datetime import date
 import pandas as pd
+import re
 
 
-def get_date_range_options(conn):
+def get_date_range_options(conn=None):
     today = date.today()
 
 
@@ -172,3 +173,59 @@ def identify_worthy_opponents(matches_df, competitiveness_threshold):
                 worthy_opponents.append(opponent)
 
     return worthy_opponents
+
+
+def get_latest_version():
+    """Extract the latest version from CHANGELOG.md or VERSION file"""
+    # Try to get version from CHANGELOG.md
+    try:
+        # Try different potential paths for the CHANGELOG.md file
+        potential_paths = ['CHANGELOG.md', './CHANGELOG.md', '../CHANGELOG.md', '/app/CHANGELOG.md']
+
+        for path in potential_paths:
+            try:
+                with open(path, 'r') as f:
+                    content = f.read()
+                    print(f"Successfully read CHANGELOG.md from {path}")
+
+                    # Try both version patterns:
+                    # Pattern with ## prefix (standard format): ## [1.2.3]
+                    # Pattern without prefix (fallback): [1.2.3]
+                    version_matches = re.findall(r'##\s+\[(\d+\.\d+\.\d+)\]', content)
+                    if not version_matches:
+                        # Try alternative pattern without ## prefix
+                        version_matches = re.findall(r'\[(\d+\.\d+\.\d+)\]', content)
+
+                    if version_matches:
+                        print(f"Found version(s): {version_matches[0]}")
+                        # Return the first match (most recent version)
+                        return version_matches[0]
+                    else:
+                        print(f"No version pattern matches found in {path}")
+
+                # If we got here, we opened the file but didn't find a version
+                break
+
+            except FileNotFoundError:
+                print(f"Could not find CHANGELOG.md at {path}")
+                continue
+
+        # CHANGELOG.md not found or no version detected, try VERSION file
+        version_file_paths = ['src/VERSION', './src/VERSION', '../src/VERSION', '/app/src/VERSION']
+        for path in version_file_paths:
+            try:
+                with open(path, 'r') as f:
+                    version = f.read().strip()
+                    print(f"Using version from VERSION file: {version}")
+                    return version
+            except FileNotFoundError:
+                print(f"Could not find VERSION file at {path}")
+                continue
+
+        # If we get here, we couldn't find a version in any of the paths
+        print("Falling back to default version 1.1.8")
+        return "1.1.8"  # Default fallback version
+
+    except Exception as e:
+        print(f"Error reading version files: {str(e)}")
+        return "1.1.8"  # Default fallback version

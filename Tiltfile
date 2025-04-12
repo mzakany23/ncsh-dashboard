@@ -9,12 +9,14 @@ dc_resource('analytics', trigger_mode=TRIGGER_MODE_AUTO)
 # Add file watching for analytics service
 watch_file('./src')
 watch_file('./Dockerfile')
+watch_file('./CHANGELOG.md')
 
 dc_resource('dashboard', trigger_mode=TRIGGER_MODE_AUTO)
 # Add file watching for dashboard service
 watch_file('./src')
 watch_file('./Dockerfile')
 watch_file('./data')
+watch_file('./CHANGELOG.md')
 
 # Add a helpful message when Tilt starts
 local_resource(

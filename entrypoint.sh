@@ -62,6 +62,14 @@ if [ -d "/app/data" ]; then
   # Check if parquet file exists, if not copy from backup
   if [ -f "$PARQUET_FILE" ]; then
     echo "Parquet file exists, size: $(stat -c%s $PARQUET_FILE) bytes"
+    if [ -f "$BACKUP_DATA_DIR/data.parquet" ]; then
+      echo "Updating parquet file from backup (S3 version)"
+      cp "$BACKUP_DATA_DIR/data.parquet" "$PARQUET_FILE"
+      chmod 644 "$PARQUET_FILE"
+      echo "Updated parquet file, new size: $(stat -c%s $PARQUET_FILE) bytes"
+    else
+      echo "No backup parquet file found, using existing volume parquet file"
+    fi
   else
     echo "Parquet file not found at $PARQUET_FILE"
     if [ -f "$BACKUP_DATA_DIR/data.parquet" ]; then

@@ -1553,10 +1553,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
         if not n_clicks:
             return no_update, no_update, no_update
 
-        # Create spinning icon - to be returned right away, showing generation is in progress
-        spinning_icon = html.I(className="fas fa-robot ai-icon ai-icon-spinning")
-
-        # Create normal icon - to be returned when generation is complete
+        # Create normal icon - to be returned after generation is complete
         normal_icon = html.I(className="fas fa-robot ai-icon")
 
         # Use the team group value if team selection type is 'group'
@@ -1585,14 +1582,6 @@ def init_callbacks(app, teams, team_groups_param, conn):
                 end_date or datetime.now().strftime("%Y-%m-%d")
             ]
 
-            # Display initial loading state
-            initial_content = html.Div([
-                html.Div([
-                    html.P("Analyzing data with AI...", style={"marginBottom": "10px"}),
-                    html.Div(className="typing-cursor")
-                ])
-            ])
-
             # Generate the summary using Claude
             logger.debug(f"Calling Claude API for summary generation for team: {selected_team}")
             logger.debug(f"ANTHROPIC_API_KEY set: {bool(os.getenv('ANTHROPIC_API_KEY'))}")
@@ -1614,7 +1603,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
                     html.P(summary_markdown)
                 ], style={"color": "red"}), {'display': 'block'}, normal_icon
 
-            # Return the markdown content with normal icon
+            # Return the markdown content with normal icon ONLY AFTER generation is complete
             return dcc.Markdown(summary_markdown, dangerously_allow_html=True), {'display': 'block'}, normal_icon
 
         except Exception as e:

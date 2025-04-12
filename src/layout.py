@@ -1,7 +1,7 @@
 from dash import dcc, html, dash_table
 import dash_bootstrap_components as dbc
 from datetime import datetime, timedelta
-from src.util import get_date_range_options
+from src.util import get_date_range_options, get_latest_version
 
 def get_loading_spinner():
     return dbc.Spinner(
@@ -27,6 +27,10 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
     if max_date is None:
         max_date = datetime.now().strftime('%Y-%m-%d')
     loading_spinner = get_loading_spinner()
+
+    # Get the latest version from CHANGELOG.md
+    version = get_latest_version()
+
     app.layout = dbc.Container([
         # URL location component for tracking state
         dcc.Location(id='url', refresh=False),
@@ -74,7 +78,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                    "border-radius": "4px",
                                    "font-size": "12px",
                                    "font-weight": "500"}),
-                    html.Span("v1.2.0",
+                    html.Span(f"v{version}",
                              style={"color": "#666666",
                                    "font-size": "12px",
                                    "font-weight": "500"}),
@@ -104,7 +108,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                            "border-radius": "4px",
                                            "font-size": "12px",
                                            "font-weight": "500"}),
-                            html.Span("v1.2.0",
+                            html.Span(f"v{version}",
                                      style={"color": "#666666",
                                            "font-size": "12px",
                                            "font-weight": "500"}),

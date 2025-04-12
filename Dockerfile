@@ -55,6 +55,7 @@ COPY scripts /app/scripts
 COPY litefs.yml /etc/litefs.yml
 COPY data/data.parquet /app/data/data.parquet
 COPY data/team_groups.db /app/data/team_groups.db
+COPY CHANGELOG.md /app/CHANGELOG.md
 # Also copy to backup directory
 COPY data/data.parquet /app/backup_data/data.parquet
 COPY data/team_groups.db /app/backup_data/team_groups.db

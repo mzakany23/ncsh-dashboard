@@ -39,8 +39,8 @@ else:
 
 # Update path to point to absolute path
 PARQUET_FILE = os.environ.get('PARQUET_FILE',
-                            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                       'analysis/data/data.parquet'))
+                            os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                       'data/sample-data.parquet'))
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 DB_PATH = os.path.join(DATA_DIR, 'team_groups.db')
 

@@ -58,6 +58,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
             Output('opponent-comparison-chart', 'figure'),
             Output('opponent-win-rate-chart', 'figure'),
             Output('opponent-goal-diff-chart', 'figure'),
+            Output('goal-diff-time-chart', 'figure'),
             Output('opponent-analysis-section', 'style')
         ],
         [
@@ -141,6 +142,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
             opponent_analysis['comparison_chart'],
             opponent_analysis['win_rate_chart'],
             opponent_analysis['goal_diff_chart'],
+            opponent_analysis['goal_diff_time_chart'],
             display_opponent_analysis
         )
 
@@ -644,6 +646,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
         opponent_comparison_chart = go.Figure()
         opponent_win_rate_chart = go.Figure()
         opponent_goal_diff_chart = go.Figure()
+        goal_diff_time_chart = go.Figure()
 
         # Generate appropriate analysis text based on filter type
         if opponent_filter_type == 'all':
@@ -669,9 +672,18 @@ def init_callbacks(app, teams, team_groups_param, conn):
                 opponent_comparison_chart = create_opponent_comparison_chart(opponent_stats_df)
                 opponent_win_rate_chart = create_opponent_win_rate_chart(opponent_stats_df)
                 opponent_goal_diff_chart = create_opponent_goal_diff_chart(opponent_stats_df)
+
+                # Get display name for goal diff time chart
+                if 'team' in filtered_matches_df.columns and len(filtered_matches_df['team'].unique()) == 1:
+                    display_name = filtered_matches_df['team'].iloc[0]
+                else:
+                    display_name = "Selected Team"
+
+                # Create the new goal differential time chart
+                goal_diff_time_chart = create_goal_differential_time_chart(filtered_matches_df, display_name)
         else:
             # Empty figures with appropriate messages
-            for chart in [opponent_comparison_chart, opponent_win_rate_chart, opponent_goal_diff_chart]:
+            for chart in [opponent_comparison_chart, opponent_win_rate_chart, opponent_goal_diff_chart, goal_diff_time_chart]:
                 chart.update_layout(
                     title="No match data available",
                     xaxis=dict(showticklabels=False),
@@ -682,7 +694,8 @@ def init_callbacks(app, teams, team_groups_param, conn):
             'analysis_text': opponent_analysis_text,
             'comparison_chart': opponent_comparison_chart,
             'win_rate_chart': opponent_win_rate_chart,
-            'goal_diff_chart': opponent_goal_diff_chart
+            'goal_diff_chart': opponent_goal_diff_chart,
+            'goal_diff_time_chart': goal_diff_time_chart
         }
 
     def generate_opponent_stats_dataframe(filtered_matches_df):
@@ -898,6 +911,232 @@ def init_callbacks(app, teams, team_groups_param, conn):
         )
 
         return opponent_goal_diff_chart
+
+    def create_goal_differential_time_chart(filtered_matches_df, team_name):
+        """Create a time series chart showing goal differential over time for each match."""
+        goal_diff_time_chart = go.Figure()
+
+        if not filtered_matches_df.empty:
+            # Sort matches by date (chronological order)
+            sorted_df = filtered_matches_df.sort_values(by='date', ascending=True)
+
+            # Calculate goal differential for each match
+            sorted_df['goal_diff'] = sorted_df['team_score'] - sorted_df['opponent_score']
+
+            # Create a cumulative goal differential line
+            # First replace NA values with 0 for cumulative calculation purposes
+            sorted_df['goal_diff_clean'] = sorted_df['goal_diff'].fillna(0)
+            sorted_df['cumulative_goal_diff'] = sorted_df['goal_diff_clean'].cumsum()
+
+            # Calculate 10-match rolling average (skip NA values)
+            sorted_df['rolling_avg'] = sorted_df['goal_diff'].rolling(window=10, min_periods=1).mean()
+
+            # Extract year for season grouping
+            sorted_df['season'] = pd.to_datetime(sorted_df['date']).dt.year
+
+            # Add match result for coloring - safely handle NA values
+            def get_result_color(row):
+                if pd.isna(row['goal_diff']):
+                    return '#CCCCCC'  # Gray for NA values
+                elif row['goal_diff'] > 0:
+                    return '#44B78B'  # Green for positive
+                elif row['goal_diff'] == 0:
+                    return '#FCC700'  # Yellow for draw
+                else:
+                    return '#E04355'  # Red for negative
+
+            sorted_df['result_color'] = sorted_df.apply(get_result_color, axis=1)
+
+            # Find significant matches (goal diff >= 5 or <= -3) - filter out NAs
+            significant_matches = sorted_df[
+                (~pd.isna(sorted_df['goal_diff'])) & (
+                    (sorted_df['goal_diff'] >= 5) |
+                    (sorted_df['goal_diff'] <= -3)
+                )
+            ]
+
+            # Draw season separators and labels
+            seasons = sorted_df['season'].unique()
+            for i, season in enumerate(seasons):
+                if i > 0:  # Skip the first season's left boundary
+                    # Find first match of this season
+                    season_start = sorted_df[sorted_df['season'] == season].iloc[0]['date']
+
+                    # Add vertical line for season boundary
+                    goal_diff_time_chart.add_shape(
+                        type="line",
+                        x0=season_start,
+                        y0=0,
+                        x1=season_start,
+                        y1=sorted_df['cumulative_goal_diff'].max() * 0.95,
+                        line=dict(color="#20A7C9", width=2, dash="dash"),
+                    )
+
+                    # Add season label
+                    goal_diff_time_chart.add_annotation(
+                        x=season_start,
+                        y=sorted_df['cumulative_goal_diff'].max() * 0.98,
+                        text=f"{season} Season",
+                        showarrow=False,
+                        font=dict(color="#20A7C9", size=14),
+                        bgcolor="rgba(255, 255, 255, 0.8)",
+                        bordercolor="#20A7C9",
+                        borderwidth=1,
+                        borderpad=4
+                    )
+
+            # Create custom hover text with match details - safely handle NA values
+            def get_hover_text(row):
+                if pd.isna(row['goal_diff']) or pd.isna(row['team_score']) or pd.isna(row['opponent_score']):
+                    return f"Date: {row['date']}<br>Opponent: {row['opponent_team']}<br>Score: NA<br>Goal Diff: NA<br>Result: NA"
+
+                goal_diff = int(row['goal_diff'])
+                result_text = 'Win' if goal_diff > 0 else ('Draw' if goal_diff == 0 else 'Loss')
+
+                return (f"Date: {row['date']}<br>" +
+                        f"Opponent: {row['opponent_team']}<br>" +
+                        f"Score: {int(row['team_score'])} - {int(row['opponent_score'])}<br>" +
+                        f"Goal Diff: {goal_diff}<br>" +
+                        f"Result: {result_text}")
+
+            sorted_df['hover_text'] = sorted_df.apply(get_hover_text, axis=1)
+
+            # Add individual match goal differentials as a scatter plot instead of bars
+            # This makes them more visible against the trending lines
+            goal_diff_time_chart.add_trace(go.Scatter(
+                x=sorted_df['date'],
+                y=sorted_df['goal_diff'],
+                mode='markers',
+                name='Match Goal Diff',
+                marker=dict(
+                    color=sorted_df['result_color'],
+                    size=sorted_df['goal_diff'].fillna(0).abs() * 1.5 + 5,  # Size based on magnitude, handle NAs
+                    symbol='circle',
+                    line=dict(width=1, color='white')
+                ),
+                hovertext=sorted_df['hover_text'],
+                hoverinfo='text'
+            ))
+
+            # Add 10-match rolling average trend line
+            goal_diff_time_chart.add_trace(go.Scatter(
+                x=sorted_df['date'],
+                y=sorted_df['rolling_avg'],
+                mode='lines',
+                name='10-Match Avg',
+                line=dict(color='#FF7F44', width=2, dash='dot'),  # Orange line
+                hovertemplate='%{x}<br>10-Match Avg: %{y:.1f}<extra></extra>'
+            ))
+
+            # Add cumulative goal differential line
+            goal_diff_time_chart.add_trace(go.Scatter(
+                x=sorted_df['date'],
+                y=sorted_df['cumulative_goal_diff'],
+                mode='lines',
+                name='Cumulative Goal Diff',
+                line=dict(color='#20A7C9', width=3),  # Superset primary color
+                hovertemplate='%{x}<br>Cumulative Goal Diff: %{y}<extra></extra>'
+            ))
+
+            # Add annotations for significant matches
+            for idx, row in significant_matches.iterrows():
+                goal_diff_time_chart.add_annotation(
+                    x=row['date'],
+                    y=row['goal_diff'],
+                    text=f"{int(row['goal_diff'])}",
+                    showarrow=True,
+                    arrowhead=2,
+                    arrowsize=1,
+                    arrowwidth=2,
+                    arrowcolor="#323232",
+                    font=dict(size=10, color="#FFFFFF"),
+                    bgcolor=row['result_color'],
+                    bordercolor="#FFFFFF",
+                    borderwidth=1,
+                    borderpad=3,
+                    opacity=0.8
+                )
+        else:
+            # Create empty chart with message
+            goal_diff_time_chart.add_annotation(
+                text="No matches found with the current filters",
+                showarrow=False,
+                font=dict(size=14, color="#20A7C9"),  # Superset primary color
+                xref="paper", yref="paper",
+                x=0.5, y=0.5
+            )
+
+        # Format the team name for display
+        display_team = team_name
+
+        # Apply chart styling
+        goal_diff_time_chart.update_layout(
+            title=dict(
+                text=f'{display_team} Goal Differential Over Time',
+                font=dict(size=20, color='#20A7C9', family='Inter, Helvetica Neue, Arial, sans-serif')
+            ),
+            xaxis=dict(
+                title=dict(
+                    text='Date',
+                    font=dict(size=14, color='#323232', family='Inter, Helvetica Neue, Arial, sans-serif')
+                ),
+                showgrid=True,
+                gridcolor='#F5F5F5',
+                showline=True,
+                linecolor='#E0E0E0',
+                tickfont=dict(family='Inter, Helvetica Neue, Arial, sans-serif', size=12, color='#323232')
+            ),
+            yaxis=dict(
+                title=dict(
+                    text='Goal Differential',
+                    font=dict(size=14, color='#323232', family='Inter, Helvetica Neue, Arial, sans-serif')
+                ),
+                showgrid=True,
+                gridcolor='#F5F5F5',
+                showline=True,
+                linecolor='#E0E0E0',
+                tickfont=dict(family='Inter, Helvetica Neue, Arial, sans-serif', size=12, color='#323232'),
+                zeroline=True,
+                zerolinecolor='#E0E0E0',
+                zerolinewidth=2
+            ),
+            yaxis2=dict(
+                title=dict(
+                    text='Cumulative Goal Differential',
+                    font=dict(color='#20A7C9')
+                ),
+                tickfont=dict(color='#20A7C9'),
+                anchor='x',
+                overlaying='y',
+                side='right',
+                showgrid=False
+            ),
+            legend=dict(
+                orientation='h',
+                yanchor='bottom',
+                y=1.02,
+                xanchor='right',
+                x=1,
+                font=dict(size=12, family='Inter, Helvetica Neue, Arial, sans-serif'),
+                bgcolor='rgba(255, 255, 255, 0.8)',
+                bordercolor='#E0E0E0',
+                borderwidth=1
+            ),
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            hovermode='closest',
+            margin=dict(l=60, r=30, t=80, b=60)
+        )
+
+        # Update the cumulative goal diff to use the secondary y-axis if needed
+        # Handle NA values safely
+        if (not filtered_matches_df.empty and
+            not sorted_df['cumulative_goal_diff'].empty and
+            not pd.isna(sorted_df['cumulative_goal_diff'].max()) and
+            sorted_df['cumulative_goal_diff'].max() > 20):
+            goal_diff_time_chart.data[2]['yaxis'] = 'y2'
+
+        return goal_diff_time_chart
 
     # Callback to ensure data loads on initial page load
     @app.callback(

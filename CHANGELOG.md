@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2025-04-13
+
+### Added
+- Day of week performance chart to analyze team performance by day
+- Result filtering for match results table
+- Enhanced AI analysis with improved match data formatting
+- Improved team group management with better error handling and logging
+
+### Fixed
+- Fixed team group persistence issues with improved database operations
+- Enhanced error handling in team group management operations
+- Improved logging throughout the application
+- Fixed URL state management for team group selection
+
+### Changed
+- Improved UI consistency with standardized loading spinners
+- Enhanced mobile menu toggle functionality
+- Optimized database queries for better performance
+- Streamlined team group management interface
+
 ## [1.2.1] - 2025-04-13
 
 ### Added

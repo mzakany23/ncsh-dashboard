@@ -462,6 +462,16 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                     type="default",
                     color="#20A7C9",
                     children=[
+                        # Goal Differential Time Chart (moved from Opponent Analysis section)
+                        dbc.Card([
+                            dbc.CardHeader("Goal Differential Over Time"),
+                            dbc.CardBody([
+                                html.P("Track performance through goal differentials per match, with season markers, rolling 10-match average, and cumulative trend. Larger markers indicate bigger goal differences, and significant matches are highlighted."),
+                                dcc.Graph(id="goal-diff-time-chart")
+                            ])
+                        ], className="mb-4"),
+
+                        # Existing performance trend chart
                         dbc.Card([
                             dbc.CardBody([
                                 html.P("This chart shows the cumulative wins, draws, and losses over the selected time period."),
@@ -535,13 +545,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                 ], className="mb-3"),
 
                                 # New Goal Differential Time Chart
-                                dbc.Card([
-                                    dbc.CardHeader("Goal Differential Over Time"),
-                                    dbc.CardBody([
-                                        html.P("Track performance through goal differentials per match, with season markers, rolling 10-match average, and cumulative trend. Larger markers indicate bigger goal differences, and significant matches are highlighted."),
-                                        dcc.Graph(id="goal-diff-time-chart")
-                                    ])
-                                ], className="mb-4")
+                                # Goal Differential Time Chart removed (moved to Performance Over Time section)
                             ]
                         )
                     ],

@@ -50,6 +50,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
             Output('goals-scored', 'children'),
             Output('goals-conceded-display', 'children'),
             Output('goal-difference', 'children'),
+            Output('goal-diff-time-chart', 'figure'),  # Moved here to be first in Performance Over Time section
             Output('performance-trend', 'figure'),
             Output('match-results-table', 'data'),
             Output('goal-stats-chart', 'figure'),
@@ -58,7 +59,6 @@ def init_callbacks(app, teams, team_groups_param, conn):
             Output('opponent-comparison-chart', 'figure'),
             Output('opponent-win-rate-chart', 'figure'),
             Output('opponent-goal-diff-chart', 'figure'),
-            Output('goal-diff-time-chart', 'figure'),
             Output('opponent-analysis-section', 'style')
         ],
         [
@@ -134,6 +134,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
             str(dashboard_metrics['goals_scored']),
             str(dashboard_metrics['goals_conceded']),
             str(dashboard_metrics['goal_diff']),
+            visualizations['goal_diff_time_chart'],  # Moved here to be first in Performance Over Time section
             visualizations['performance_fig'],
             dashboard_metrics['table_data'],
             visualizations['goal_fig'],
@@ -142,7 +143,6 @@ def init_callbacks(app, teams, team_groups_param, conn):
             opponent_analysis['comparison_chart'],
             opponent_analysis['win_rate_chart'],
             opponent_analysis['goal_diff_chart'],
-            opponent_analysis['goal_diff_time_chart'],
             display_opponent_analysis
         )
 
@@ -384,6 +384,9 @@ def init_callbacks(app, teams, team_groups_param, conn):
         else:
             sorted_df = pd.DataFrame(columns=filtered_matches_df.columns)  # Empty DataFrame with same columns
 
+        # Create goal differential time chart (moved from opponent analysis)
+        goal_diff_time_chart = create_goal_differential_time_chart(sorted_df, team)
+
         # Create performance trend chart
         performance_fig = create_performance_trend_chart(sorted_df, team)
 
@@ -397,6 +400,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
         pie_fig = create_result_distribution_pie_chart(filtered_matches_df)
 
         return {
+            'goal_diff_time_chart': goal_diff_time_chart,
             'performance_fig': performance_fig,
             'goal_fig': goal_fig,
             'pie_fig': pie_fig
@@ -646,7 +650,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
         opponent_comparison_chart = go.Figure()
         opponent_win_rate_chart = go.Figure()
         opponent_goal_diff_chart = go.Figure()
-        goal_diff_time_chart = go.Figure()
+        # goal_diff_time_chart removed (moved to Performance Over Time section)
 
         # Generate appropriate analysis text based on filter type
         if opponent_filter_type == 'all':
@@ -673,17 +677,10 @@ def init_callbacks(app, teams, team_groups_param, conn):
                 opponent_win_rate_chart = create_opponent_win_rate_chart(opponent_stats_df)
                 opponent_goal_diff_chart = create_opponent_goal_diff_chart(opponent_stats_df)
 
-                # Get display name for goal diff time chart
-                if 'team' in filtered_matches_df.columns and len(filtered_matches_df['team'].unique()) == 1:
-                    display_name = filtered_matches_df['team'].iloc[0]
-                else:
-                    display_name = "Selected Team"
-
-                # Create the new goal differential time chart
-                goal_diff_time_chart = create_goal_differential_time_chart(filtered_matches_df, display_name)
+                # Goal differential time chart creation removed (moved to generate_visualizations function)
         else:
             # Empty figures with appropriate messages
-            for chart in [opponent_comparison_chart, opponent_win_rate_chart, opponent_goal_diff_chart, goal_diff_time_chart]:
+            for chart in [opponent_comparison_chart, opponent_win_rate_chart, opponent_goal_diff_chart]:
                 chart.update_layout(
                     title="No match data available",
                     xaxis=dict(showticklabels=False),
@@ -694,8 +691,8 @@ def init_callbacks(app, teams, team_groups_param, conn):
             'analysis_text': opponent_analysis_text,
             'comparison_chart': opponent_comparison_chart,
             'win_rate_chart': opponent_win_rate_chart,
-            'goal_diff_chart': opponent_goal_diff_chart,
-            'goal_diff_time_chart': goal_diff_time_chart
+            'goal_diff_chart': opponent_goal_diff_chart
+            # 'goal_diff_time_chart' removed (moved to generate_visualizations function)
         }
 
     def generate_opponent_stats_dataframe(filtered_matches_df):

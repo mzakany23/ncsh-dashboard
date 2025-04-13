@@ -60,7 +60,8 @@ def init_callbacks(app, teams, team_groups_param, conn):
             Output('opponent-analysis-text', 'children'),
             Output('opponent-comparison-chart', 'figure'),
             Output('opponent-goal-diff-chart', 'figure'),
-            Output('opponent-analysis-section', 'style')
+            Output('opponent-analysis-section', 'style'),
+            Output('full-match-results-data', 'data')
         ],
         [
             Input('team-dropdown', 'value'),
@@ -144,7 +145,8 @@ def init_callbacks(app, teams, team_groups_param, conn):
             opponent_analysis['analysis_text'],
             opponent_analysis['comparison_chart'],
             opponent_analysis['goal_diff_chart'],
-            display_opponent_analysis
+            display_opponent_analysis,
+            dashboard_metrics['table_data'] # Store full data in hidden div
         )
 
     def run_debug_queries(conn, filter_conditions):
@@ -2195,3 +2197,22 @@ def init_callbacks(app, teams, team_groups_param, conn):
                 html.P("Error generating AI analysis:"),
                 html.P(str(e))
             ], style={"color": "red"}), {'display': 'block'}, normal_icon
+
+    # New callback to filter the match results table based on the result filter dropdown
+    @app.callback(
+        Output('match-results-table', 'data', allow_duplicate=True),
+        [Input('result-filter-dropdown', 'value')],
+        [State('full-match-results-data', 'data')],
+        prevent_initial_call=True
+    )
+    def filter_match_results_table(result_filter, full_data):
+        """Filter the match results table based on selected win/loss/draw filters."""
+        # If no result filter or full data is empty, return the full data
+        if not result_filter or not full_data or len(result_filter) == 0:
+            return full_data
+
+        # Apply result filter
+        filtered_data = [row for row in full_data if row['result'] in result_filter]
+        logger.debug(f"Applied result filter: {result_filter}, {len(filtered_data)} matches remain out of {len(full_data)}")
+
+        return filtered_data

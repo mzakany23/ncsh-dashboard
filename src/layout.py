@@ -575,6 +575,21 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                             dbc.CardHeader("Match Results Table"),
                             dbc.CardBody([
                                 html.P("Complete record of individual matches during the selected period."),
+                                dbc.Row([
+                                    dbc.Col([
+                                        dcc.Dropdown(
+                                            id='result-filter-dropdown',
+                                            options=[
+                                                {'label': 'Win', 'value': 'Win'},
+                                                {'label': 'Loss', 'value': 'Loss'},
+                                                {'label': 'Draw', 'value': 'Draw'}
+                                            ],
+                                            multi=True,
+                                            placeholder="Filter by result (win/loss/draw)",
+                                            className="mb-3"
+                                        )
+                                    ], width=12, md=6)
+                                ]),
                                 dash_table.DataTable(
                                     id='match-results-table',
                                     columns=[
@@ -644,6 +659,9 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                         ], className="mb-4")
                     ]
                 ),
+
+                # Hidden div to store the full match results data
+                dcc.Store(id='full-match-results-data', data={}),
 
                 # Footer
                 dbc.Row([

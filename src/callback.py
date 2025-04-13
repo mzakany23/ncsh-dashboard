@@ -59,7 +59,6 @@ def init_callbacks(app, teams, team_groups_param, conn):
             Output('goal-stats-pie', 'figure'),
             Output('opponent-analysis-text', 'children'),
             Output('opponent-comparison-chart', 'figure'),
-            Output('opponent-win-rate-chart', 'figure'),
             Output('opponent-goal-diff-chart', 'figure'),
             Output('opponent-analysis-section', 'style')
         ],
@@ -144,7 +143,6 @@ def init_callbacks(app, teams, team_groups_param, conn):
             visualizations['pie_fig'],
             opponent_analysis['analysis_text'],
             opponent_analysis['comparison_chart'],
-            opponent_analysis['win_rate_chart'],
             opponent_analysis['goal_diff_chart'],
             display_opponent_analysis
         )
@@ -1043,7 +1041,6 @@ def init_callbacks(app, teams, team_groups_param, conn):
         """
         # Set default empty visualization objects
         opponent_comparison_chart = go.Figure()
-        opponent_win_rate_chart = go.Figure()
         opponent_goal_diff_chart = go.Figure()
         # goal_diff_time_chart removed (moved to Performance Over Time section)
 
@@ -1069,13 +1066,12 @@ def init_callbacks(app, teams, team_groups_param, conn):
 
             if not opponent_stats_df.empty:
                 opponent_comparison_chart = create_opponent_comparison_chart(opponent_stats_df)
-                opponent_win_rate_chart = create_opponent_win_rate_chart(opponent_stats_df)
                 opponent_goal_diff_chart = create_opponent_goal_diff_chart(opponent_stats_df)
 
                 # Goal differential time chart creation removed (moved to generate_visualizations function)
         else:
             # Empty figures with appropriate messages
-            for chart in [opponent_comparison_chart, opponent_win_rate_chart, opponent_goal_diff_chart]:
+            for chart in [opponent_comparison_chart, opponent_goal_diff_chart]:
                 chart.update_layout(
                     title="No match data available",
                     xaxis=dict(showticklabels=False),
@@ -1085,7 +1081,6 @@ def init_callbacks(app, teams, team_groups_param, conn):
         return {
             'analysis_text': opponent_analysis_text,
             'comparison_chart': opponent_comparison_chart,
-            'win_rate_chart': opponent_win_rate_chart,
             'goal_diff_chart': opponent_goal_diff_chart
             # 'goal_diff_time_chart' removed (moved to generate_visualizations function)
         }
@@ -1201,53 +1196,6 @@ def init_callbacks(app, teams, team_groups_param, conn):
 
         return opponent_comparison_chart
 
-    def create_opponent_win_rate_chart(opponent_stats_df):
-        """Create a win/loss breakdown chart for each opponent."""
-        opponent_win_rate_chart = go.Figure()
-
-        # Create a separate pie chart for each opponent
-        for i, row in opponent_stats_df.iterrows():
-            opponent_win_rate_chart.add_trace(go.Pie(
-                labels=['Wins', 'Draws', 'Losses'],
-                values=[row['wins'], row['draws'], row['losses']],
-                name=row['opponent'],
-                title=row['opponent'],
-                marker_colors=['#44B78B', '#FCC700', '#E04355'],  # Superset colors
-                visible=(i == 0)  # Only show first opponent by default
-            ))
-
-        # Add dropdown for opponent selection
-        buttons = []
-        for i, row in opponent_stats_df.iterrows():
-            visibility = [j == i for j in range(len(opponent_stats_df))]
-            buttons.append(dict(
-                method='update',
-                label=row['opponent'],
-                args=[{'visible': visibility},
-                    {'title': {'text': f'Win/Loss Breakdown vs {row["opponent"]}',
-                                'font': {'size': 20, 'color': '#20A7C9'}}}]
-            ))
-
-        opponent_win_rate_chart.update_layout(
-            title={
-                'text': f'Win/Loss Breakdown vs {opponent_stats_df.iloc[0]["opponent"] if len(opponent_stats_df) > 0 else ""}',
-                'font': {'size': 20, 'color': '#20A7C9', 'family': 'Inter, Helvetica Neue, Arial, sans-serif'}
-            },
-            updatemenus=[{
-                'buttons': buttons,
-                'direction': 'down',
-                'showactive': True,
-                'x': 0.5,
-                'y': 1.15,
-                'xanchor': 'center',
-                'yanchor': 'top'
-            }] if len(opponent_stats_df) > 0 else [],
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            margin=dict(l=10, r=10, t=120, b=40)
-        )
-
-        return opponent_win_rate_chart
 
     def create_opponent_goal_diff_chart(opponent_stats_df):
         """Create a goal statistics chart by opponent."""

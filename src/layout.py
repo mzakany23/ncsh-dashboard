@@ -467,12 +467,20 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                             dbc.CardHeader("Goal Differential Over Time"),
                             dbc.CardBody([
                                 html.P("Track performance through goal differentials per match, with season markers, rolling 10-match average, and cumulative trend. Larger markers indicate bigger goal differences, and significant matches are highlighted."),
-                                dcc.Graph(id="goal-diff-time-chart")
+                                dcc.Loading(
+                                    id="loading-goal-diff-chart",
+                                    type="grow",
+                                    color="#20A7C9",
+                                    children=[
+                                        dcc.Graph(id="goal-diff-time-chart")
+                                    ]
+                                )
                             ])
                         ], className="mb-4"),
 
                         # Existing performance trend chart
                         dbc.Card([
+                            dbc.CardHeader("Performance Trend Over Time"),
                             dbc.CardBody([
                                 html.P("This chart shows the cumulative wins, draws, and losses over the selected time period."),
                                 dcc.Graph(id="performance-trend")
@@ -500,15 +508,17 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                     color="#20A7C9",
                     children=[
                         dbc.Card([
+                            dbc.CardHeader("Goal Statistics"),
                             dbc.CardBody([
-                                html.P("Breakdown of goals scored, conceded, and the resulting goal difference."),
+                                html.P("Analysis of goals scored, conceded, and match result distribution."),
                                 dbc.Row([
                                     dbc.Col([
                                         dcc.Graph(id="goal-stats-chart")
-                                    ], xs=12, md=6, className="mb-3 mb-md-0"),
+                                    ], xs=12, md=5, className="mb-3"),
+                                    dbc.Col([], xs=0, md=2), # Spacer column
                                     dbc.Col([
                                         dcc.Graph(id="goal-stats-pie")
-                                    ], xs=12, md=6)
+                                    ], xs=12, md=5)
                                 ])
                             ])
                         ], className="mb-4")
@@ -534,23 +544,12 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                     ])
                                 ], className="mb-4"),
 
-                                dbc.Row([
-                                    dbc.Col([
-                                        dbc.Card([
-                                            dbc.CardHeader("Win/Loss Distribution"),
-                                            dbc.CardBody([
-                                                dcc.Graph(id="opponent-win-rate-chart")
-                                            ])
-                                        ])
-                                    ], xs=12, md=6, className="mb-3 mb-md-0"),
-                                    dbc.Col([
-                                        dbc.Card([
-                                            dbc.CardHeader("Goal Performance"),
-                                            dbc.CardBody([
-                                                dcc.Graph(id="opponent-goal-diff-chart")
-                                            ])
-                                        ])
-                                    ], xs=12, md=6),
+                                dbc.Card([
+                                    dbc.CardHeader("Goal Performance by Opponent"),
+                                    dbc.CardBody([
+                                        html.P("This chart shows the goals scored and conceded against each opponent, allowing comparison of offensive and defensive performance across different teams."),
+                                        dcc.Graph(id="opponent-goal-diff-chart")
+                                    ])
                                 ], className="mb-3"),
 
                                 # New Goal Differential Time Chart
@@ -573,6 +572,7 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                     color="#20A7C9",
                     children=[
                         dbc.Card([
+                            dbc.CardHeader("Match Results Table"),
                             dbc.CardBody([
                                 html.P("Complete record of individual matches during the selected period."),
                                 dash_table.DataTable(

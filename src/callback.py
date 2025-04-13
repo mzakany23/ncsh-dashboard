@@ -2,6 +2,7 @@ from dash import callback_context
 from dash.dependencies import Input, Output, State
 from datetime import datetime, timedelta, date
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import pandas as pd
 import sqlite3
 import dash  # Make sure dash is imported for dash.no_update
@@ -52,6 +53,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
             Output('goal-difference', 'children'),
             Output('goal-diff-time-chart', 'figure'),  # Moved here to be first in Performance Over Time section
             Output('performance-trend', 'figure'),
+            Output('day-of-week-chart', 'figure'),  # New day of week performance chart
             Output('match-results-table', 'data'),
             Output('goal-stats-chart', 'figure'),
             Output('goal-stats-pie', 'figure'),
@@ -136,6 +138,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
             str(dashboard_metrics['goal_diff']),
             visualizations['goal_diff_time_chart'],  # Moved here to be first in Performance Over Time section
             visualizations['performance_fig'],
+            visualizations['day_of_week_chart'],  # New day of week performance chart
             dashboard_metrics['table_data'],
             visualizations['goal_fig'],
             visualizations['pie_fig'],
@@ -390,6 +393,10 @@ def init_callbacks(app, teams, team_groups_param, conn):
         # Create performance trend chart
         performance_fig = create_performance_trend_chart(sorted_df, team)
 
+        # Create day of week performance chart with time dimension
+        day_stats_df, time_day_stats_df = calculate_day_of_week_stats(filtered_matches_df)
+        day_of_week_chart = create_day_of_week_chart(day_stats_df, time_day_stats_df, team)
+
         # Create goal statistics chart
         goal_fig = create_goal_stats_chart(filtered_matches_df,
                                           dashboard_metrics['goals_scored'],
@@ -402,6 +409,7 @@ def init_callbacks(app, teams, team_groups_param, conn):
         return {
             'goal_diff_time_chart': goal_diff_time_chart,
             'performance_fig': performance_fig,
+            'day_of_week_chart': day_of_week_chart,
             'goal_fig': goal_fig,
             'pie_fig': pie_fig
         }
@@ -631,6 +639,393 @@ def init_callbacks(app, teams, team_groups_param, conn):
         )
 
         return pie_fig
+
+    def calculate_day_of_week_stats(filtered_matches_df):
+        """
+        Calculate performance statistics by day of week with time dimension.
+
+        Args:
+            filtered_matches_df: DataFrame containing filtered match data
+
+        Returns:
+            Tuple of (DataFrame with day of week statistics, DataFrame with time-based day of week statistics)
+        """
+        # Create empty DataFrames if no matches
+        if filtered_matches_df.empty:
+            empty_df = pd.DataFrame(columns=['day', 'total_matches', 'win_rate', 'ci_lower', 'ci_upper', 'day_order'])
+            empty_time_df = pd.DataFrame(columns=['day', 'time_period', 'total_matches', 'win_rate', 'ci_lower', 'ci_upper', 'day_order'])
+            return empty_df, empty_time_df
+
+        # Extract day of week from date
+        filtered_matches_df = filtered_matches_df.copy()
+        filtered_matches_df['day_of_week'] = pd.to_datetime(filtered_matches_df['date']).dt.dayofweek
+        filtered_matches_df['date_obj'] = pd.to_datetime(filtered_matches_df['date'])
+
+        # Add time period (quarter-year)
+        filtered_matches_df['year'] = filtered_matches_df['date_obj'].dt.year
+        filtered_matches_df['quarter'] = filtered_matches_df['date_obj'].dt.quarter
+        filtered_matches_df['time_period'] = filtered_matches_df['year'].astype(str) + '-Q' + filtered_matches_df['quarter'].astype(str)
+
+        # Map numeric day to name (0=Monday in pandas)
+        day_map = {0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday',
+                   4: 'Friday', 5: 'Saturday', 6: 'Sunday'}
+        filtered_matches_df['day_name'] = filtered_matches_df['day_of_week'].map(day_map)
+
+        # Filter out NA results for win rate calculations
+        valid_matches_df = filtered_matches_df[filtered_matches_df['result'] != 'NA']
+
+        # Define day order for sorting
+        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        day_order_map = {day: i for i, day in enumerate(day_order)}
+
+        # 1. Calculate overall day of week statistics (for backward compatibility)
+        day_groups = valid_matches_df.groupby('day_name')
+        day_stats = []
+
+        for day, group in day_groups:
+            total_matches = len(group)
+            wins = len(group[group['result'] == 'Win'])
+            win_rate = wins / total_matches if total_matches > 0 else 0
+
+            # Calculate confidence interval using Wilson score interval
+            if total_matches > 0:
+                z = 1.96  # 95% confidence
+                # Wilson score interval formula
+                denominator = 1 + z**2/total_matches
+                center = (win_rate + z**2/(2*total_matches))/denominator
+                err = z * ((win_rate*(1-win_rate) + z**2/(4*total_matches))/total_matches)**0.5/denominator
+                ci_lower = max(0, center - err)
+                ci_upper = min(1, center + err)
+            else:
+                ci_lower, ci_upper = 0, 0
+
+            day_stats.append({
+                'day': day,
+                'total_matches': total_matches,
+                'win_rate': win_rate,
+                'ci_lower': ci_lower,
+                'ci_upper': ci_upper
+            })
+
+        # Convert to DataFrame and sort by day of week
+        day_stats_df = pd.DataFrame(day_stats)
+
+        # Add all days of the week if some are missing
+        all_days = set(day_map.values())
+        days_in_data = set(day_stats_df['day']) if not day_stats_df.empty else set()
+        missing_days = all_days - days_in_data
+
+        # Add missing days with zero values
+        for day in missing_days:
+            day_stats_df = pd.concat([day_stats_df, pd.DataFrame([{
+                'day': day,
+                'total_matches': 0,
+                'win_rate': 0,
+                'ci_lower': 0,
+                'ci_upper': 0
+            }])], ignore_index=True)
+
+        day_stats_df['day_order'] = day_stats_df['day'].map(day_order_map)
+        day_stats_df = day_stats_df.sort_values('day_order')
+
+        # 2. Calculate day of week statistics by time period
+        time_day_groups = valid_matches_df.groupby(['time_period', 'day_name'])
+        time_day_stats = []
+
+        for (time_period, day), group in time_day_groups:
+            total_matches = len(group)
+            wins = len(group[group['result'] == 'Win'])
+            win_rate = wins / total_matches if total_matches > 0 else 0
+
+            # Calculate confidence interval using Wilson score interval
+            if total_matches > 0:
+                z = 1.96  # 95% confidence
+                # Wilson score interval formula
+                denominator = 1 + z**2/total_matches
+                center = (win_rate + z**2/(2*total_matches))/denominator
+                err = z * ((win_rate*(1-win_rate) + z**2/(4*total_matches))/total_matches)**0.5/denominator
+                ci_lower = max(0, center - err)
+                ci_upper = min(1, center + err)
+            else:
+                ci_lower, ci_upper = 0, 0
+
+            time_day_stats.append({
+                'time_period': time_period,
+                'day': day,
+                'total_matches': total_matches,
+                'win_rate': win_rate,
+                'ci_lower': ci_lower,
+                'ci_upper': ci_upper
+            })
+
+        # Convert to DataFrame
+        time_day_stats_df = pd.DataFrame(time_day_stats)
+
+        if not time_day_stats_df.empty:
+            # Add day order for sorting
+            time_day_stats_df['day_order'] = time_day_stats_df['day'].map(day_order_map)
+
+            # Sort by time period and day order
+            time_day_stats_df = time_day_stats_df.sort_values(['time_period', 'day_order'])
+
+        return day_stats_df, time_day_stats_df
+
+    def create_day_of_week_chart(day_stats_df, time_day_stats_df, team_name):
+        """
+        Create a visualization showing win rates by day of week with time dimension.
+
+        Args:
+            day_stats_df: DataFrame containing overall day of week statistics
+            time_day_stats_df: DataFrame containing day of week statistics by time period
+            team_name: Name of the team for chart title
+
+        Returns:
+            Plotly figure object
+        """
+        # Create a subplot with 2 rows
+        day_of_week_chart = go.Figure()
+
+        # Check if we have data
+        if time_day_stats_df.empty or time_day_stats_df['total_matches'].sum() == 0:
+            # Create empty chart with message
+            day_of_week_chart.add_annotation(
+                text="No matches found with the current filters",
+                showarrow=False,
+                font=dict(size=14, color="#20A7C9"),  # Superset primary color
+                xref="paper", yref="paper",
+                x=0.5, y=0.5
+            )
+
+            # Apply basic styling
+            day_of_week_chart.update_layout(
+                title={
+                    'text': f'{team_name} Performance by Day of Week Over Time',
+                    'font': {'size': 20, 'color': '#20A7C9', 'family': 'Inter, Helvetica Neue, Arial, sans-serif'}
+                },
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                margin=dict(l=60, r=60, t=80, b=60)
+            )
+
+            return day_of_week_chart
+
+        # Get unique time periods and sort them chronologically
+        time_periods = sorted(time_day_stats_df['time_period'].unique())
+
+        # Get days of week in correct order
+        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+        # Create a heatmap for win rates over time
+        # Prepare data for heatmap
+        heatmap_data = []
+        hover_texts = []
+
+        for day in days:
+            win_rates = []
+            hover_text_row = []
+
+            for period in time_periods:
+                # Find the data for this day and period
+                match = time_day_stats_df[(time_day_stats_df['day'] == day) &
+                                         (time_day_stats_df['time_period'] == period)]
+
+                if not match.empty:
+                    win_rate = match['win_rate'].values[0] * 100  # Convert to percentage
+                    matches = match['total_matches'].values[0]
+                    ci_lower = match['ci_lower'].values[0] * 100
+                    ci_upper = match['ci_upper'].values[0] * 100
+
+                    win_rates.append(win_rate)
+
+                    # Create detailed hover text with confidence intervals and match count
+                    hover_text = (f"Day: {day}<br>"
+                                 f"Period: {period}<br>"
+                                 f"Win Rate: {win_rate:.1f}%<br>"
+                                 f"95% CI: [{ci_lower:.1f}%, {ci_upper:.1f}%]<br>"
+                                 f"Matches: {matches}")
+                    hover_text_row.append(hover_text)
+                else:
+                    win_rates.append(None)  # No data for this combination
+                    hover_text_row.append(f"Day: {day}<br>Period: {period}<br>No matches")
+
+            heatmap_data.append(win_rates)
+            hover_texts.append(hover_text_row)
+
+        # Create the heatmap
+        day_of_week_chart.add_trace(go.Heatmap(
+            z=heatmap_data,
+            x=time_periods,
+            y=days,
+            colorscale=[
+                [0, "#E04355"],  # Red for 0% win rate
+                [0.5, "#FCC700"],  # Yellow for 50% win rate
+                [1, "#44B78B"]   # Green for 100% win rate
+            ],
+            zmin=0,
+            zmax=100,
+            text=hover_texts,
+            hoverinfo="text",
+            colorbar=dict(
+                title="Win Rate (%)",
+                title_font=dict(color="#44B78B"),
+                tickfont=dict(color="#44B78B"),
+                title_side="right"
+            )
+        ))
+
+        # Add a second subplot for the traditional bar chart view
+        # Create a subplot with 2 rows
+        day_of_week_chart = make_subplots(
+            rows=2,
+            cols=1,
+            subplot_titles=(
+                f"{team_name} Performance by Day of Week Over Time",
+                f"{team_name} Overall Performance by Day of Week"
+            ),
+            vertical_spacing=0.2,
+            specs=[
+                [{"type": "heatmap"}],
+                [{"secondary_y": True}]
+            ]
+        )
+
+        # Add heatmap to first subplot
+        day_of_week_chart.add_trace(
+            go.Heatmap(
+                z=heatmap_data,
+                x=time_periods,
+                y=days,
+                colorscale=[
+                    [0, "#E04355"],  # Red for 0% win rate
+                    [0.5, "#FCC700"],  # Yellow for 50% win rate
+                    [1, "#44B78B"]   # Green for 100% win rate
+                ],
+                zmin=0,
+                zmax=100,
+                text=hover_texts,
+                hoverinfo="text",
+                colorbar=dict(
+                    title="Win Rate (%)",
+                    title_font=dict(color="#44B78B"),
+                    tickfont=dict(color="#44B78B"),
+                    title_side="right"
+                )
+            ),
+            row=1, col=1
+        )
+
+        # Add traditional bar chart to second subplot
+        if not day_stats_df.empty and day_stats_df['total_matches'].sum() > 0:
+            # Add win rate bars
+            day_of_week_chart.add_trace(
+                go.Bar(
+                    x=day_stats_df['day'],
+                    y=day_stats_df['win_rate'] * 100,  # Convert to percentage
+                    name='Win Rate',
+                    marker_color='#44B78B',  # Superset success color
+                    text=[f"{wr*100:.1f}%" for wr in day_stats_df['win_rate']],
+                    textposition='auto',
+                    hovertemplate='%{x}<br>Win Rate: %{text}<extra></extra>'
+                ),
+                row=2, col=1
+            )
+
+            # Add error bars for confidence intervals
+            day_of_week_chart.add_trace(
+                go.Scatter(
+                    x=day_stats_df['day'],
+                    y=day_stats_df['win_rate'] * 100,
+                    mode='markers',
+                    marker=dict(color='rgba(0,0,0,0)'),  # Invisible markers
+                    error_y=dict(
+                        type='data',
+                        symmetric=False,
+                        array=(day_stats_df['ci_upper'] - day_stats_df['win_rate']) * 100,
+                        arrayminus=(day_stats_df['win_rate'] - day_stats_df['ci_lower']) * 100,
+                        color='#323232'
+                    ),
+                    showlegend=False,
+                    hoverinfo='none'
+                ),
+                row=2, col=1
+            )
+
+            # Add total matches as a secondary axis
+            day_of_week_chart.add_trace(
+                go.Bar(
+                    x=day_stats_df['day'],
+                    y=day_stats_df['total_matches'],
+                    name='Matches Played',
+                    marker_color='#20A7C9',  # Superset primary color
+                    text=day_stats_df['total_matches'],
+                    textposition='auto',
+                    hovertemplate='%{x}<br>Matches: %{y}<extra></extra>'
+                ),
+                row=2, col=1, secondary_y=True
+            )
+
+        # Update layout for both subplots
+        day_of_week_chart.update_layout(
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            legend=dict(
+                orientation='h',
+                yanchor='bottom',
+                y=1.02,
+                xanchor='center',
+                x=0.5
+            ),
+            margin=dict(l=60, r=60, t=120, b=60),
+            height=800  # Increase height to accommodate both charts
+        )
+
+        # Update axes for heatmap
+        day_of_week_chart.update_xaxes(
+            title={
+                'text': 'Time Period',
+                'font': {'size': 14, 'color': '#323232', 'family': 'Inter, Helvetica Neue, Arial, sans-serif'}
+            },
+            row=1, col=1
+        )
+
+        day_of_week_chart.update_yaxes(
+            title={
+                'text': 'Day of Week',
+                'font': {'size': 14, 'color': '#323232', 'family': 'Inter, Helvetica Neue, Arial, sans-serif'}
+            },
+            row=1, col=1
+        )
+
+        # Update axes for bar chart
+        day_of_week_chart.update_xaxes(
+            title={
+                'text': 'Day of Week',
+                'font': {'size': 14, 'color': '#323232', 'family': 'Inter, Helvetica Neue, Arial, sans-serif'}
+            },
+            row=2, col=1
+        )
+
+        day_of_week_chart.update_yaxes(
+            title={
+                'text': 'Win Rate (%)',
+                'font': {'color': '#44B78B'}
+            },
+            tickformat='.0f',
+            range=[0, 110],
+            row=2, col=1
+        )
+
+        day_of_week_chart.update_yaxes(
+            title={
+                'text': 'Matches Played',
+                'font': {'color': '#20A7C9'}
+            },
+            range=[0, max(day_stats_df['total_matches']) * 1.2] if len(day_stats_df) > 0 and day_stats_df['total_matches'].max() > 0 else [0, 10],
+            row=2, col=1,
+            secondary_y=True
+        )
+
+        return day_of_week_chart
 
     def generate_opponent_analysis(filtered_matches_df, opponent_filter_type, opponent_selection, opponent_team_groups, competitiveness_threshold):
         """

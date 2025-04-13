@@ -477,6 +477,15 @@ def init_layout(app, teams, team_groups=None, conn=None, min_date=None, max_date
                                 html.P("This chart shows the cumulative wins, draws, and losses over the selected time period."),
                                 dcc.Graph(id="performance-trend")
                             ])
+                        ], className="mb-4"),
+
+                        # Day of Week Performance Chart
+                        dbc.Card([
+                            dbc.CardHeader("Performance by Day of Week Over Time"),
+                            dbc.CardBody([
+                                html.P("This visualization shows how performance on each day of the week has evolved over time. The heatmap displays win rates by day and time period, with color intensity representing win rate. The bar chart below shows overall performance by day of week with confidence intervals."),
+                                dcc.Graph(id="day-of-week-chart")
+                            ])
                         ], className="mb-4")
                     ]
                 ),

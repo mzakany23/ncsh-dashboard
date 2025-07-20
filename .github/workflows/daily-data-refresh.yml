@@ -1,0 +1,45 @@
+name: Daily Data Refresh and Deploy
+
+on:
+  schedule:
+    # Runs at 8:00 AM UTC every day
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+env:
+  FLY_APP: ncsh-dashboard
+  S3_BUCKET: ncsh-app-data
+
+jobs:
+  deploy:
+    name: Download Data and Deploy
+    runs-on: ubuntu-latest
+    environment: main
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::552336166511:role/github-actions-ncsh-dashboard
+          aws-region: us-east-2
+
+      - name: Download latest data files
+        run: |
+          mkdir -p data
+          echo "Downloading latest data.parquet from S3..."
+          aws s3 cp s3://${{ env.S3_BUCKET }}/v2/processed/parquet/data.parquet data/data.parquet
+          echo "Downloading latest team_groups.db from S3..."
+          aws s3 cp s3://${{ env.S3_BUCKET }}/v2/processed/sqlite/team_groups.db data/team_groups.db
+
+      - name: Install Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only

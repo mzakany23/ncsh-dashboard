@@ -57,13 +57,33 @@ For a faster development workflow with live reloading, you can use Tilt:
 
 ### Environment Variables
 
-You can customize the application using these environment variables:
+Required environment variables:
+- `ANTHROPIC_API_KEY` - Your Anthropic API key for Claude AI summaries
+- `AUTH0_CLIENT_ID` - Auth0 application client ID
+- `AUTH0_CLIENT_SECRET` - Auth0 application client secret
+- `AUTH0_DOMAIN` - Your Auth0 domain
+- `APP_SECRET_KEY` - Flask application secret key
 
-- `BASIC_AUTH_USERNAME`: Username for dashboard access (default: ncsoccer)
-- `BASIC_AUTH_PASSWORD`: Password for dashboard access (default: password)
-- `PARQUET_FILE`: Path to the Parquet data file (default: /app/analysis/data/data.parquet)
+### Claude AI Configuration
 
-The development server will be available at http://localhost:8050.
+The dashboard uses Claude AI to generate intelligent summaries of team performance. Configure the AI model:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CLAUDE_MODEL` | `claude-3-5-haiku-20241022` | Claude model to use for summaries |
+
+#### Available Models
+- `claude-3-5-haiku-20241022` - **Recommended**: Fast, cost-effective ($0.80/$4 per MTok)
+- `claude-3-5-sonnet-20241022` - Higher quality, more expensive ($3/$15 per MTok)
+- `claude-3-7-sonnet-20250219` - Latest features ($3/$15 per MTok)
+- `claude-opus-4-20250514` - Maximum capability ($15/$75 per MTok)
+
+#### Example Configuration
+```bash
+# Development (.env file)
+ANTHROPIC_API_KEY=your_api_key_here
+CLAUDE_MODEL=claude-3-5-haiku-20241022
+```
 
 ## Data
 

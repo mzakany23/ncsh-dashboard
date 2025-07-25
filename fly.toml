@@ -14,6 +14,8 @@ primary_region = "iad"  # virginia region
   AUTH0_CLIENT_ID = "J5SWYsyVTwGHZlnSPXoRQBh5F9JK3qUK"
   AUTH0_DOMAIN = "dev-0e4v07vo.auth0.com"
   AUTH0_CALLBACK_URL = "https://ncsh-dashboard.fly.dev/login/callback"
+  # Claude AI configuration
+  CLAUDE_MODEL = "claude-3-5-haiku-20241022"
   # These should be set as secrets
   # AUTH0_CLIENT_SECRET = "${AUTH0_CLIENT_SECRET}"
   # APP_SECRET_KEY = "${APP_SECRET_KEY}"

@@ -14,6 +14,22 @@ from src.logger import setup_logger
 # Set up logging
 logger = setup_logger(__name__)
 
+# Configuration constants
+DEFAULT_CLAUDE_MODEL = "claude-3-5-haiku-20241022"
+
+def get_claude_config():
+    """
+    Get Claude model name from environment variable with fallback.
+
+    Returns:
+        str: Claude model name to use
+
+    TODO: Could expand to include max_tokens, temperature, etc. if needed
+    """
+    model = os.getenv("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL)
+    logger.debug(f"Using Claude model: {model}")
+    return model
+
 def get_claude_client():
     """
     Create and return an Anthropic API client using the API key from environment variables.
@@ -204,6 +220,9 @@ def generate_summary(
     if not client:
         return "**Error:** Unable to generate summary. Anthropic API key not configured."
 
+    # Get configuration
+    model = get_claude_config()
+
     try:
         prompt = format_dashboard_data_for_claude(
             selected_team, date_range, opponent_filter, metrics, match_data, chart_data
@@ -213,7 +232,7 @@ def generate_summary(
         if stream:
             # Use streaming mode - returns a generator
             with client.messages.stream(
-                model="claude-3-sonnet-20240229",
+                model=model,
                 max_tokens=1024,
                 temperature=0.2,
                 system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. Format your response using Markdown with HTML color spans and bold formatting for emphasis. Use <span style=\"color:#20A7C9\">**text**</span> for positive stats, <span style=\"color:#E04355\">**text**</span> for concerning stats, and <span style=\"color:#FCC700\">**text**</span> for neutral but important stats. MAKE IMPORTANT STATISTICS VISUALLY STAND OUT. Make sure to close all HTML tags properly.",
@@ -226,7 +245,7 @@ def generate_summary(
         else:
             # Normal synchronous mode
             message = client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model=model,
                 max_tokens=1024,
                 temperature=0.2,
                 system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. Format your response using Markdown with HTML color spans and bold formatting for emphasis. Use <span style=\"color:#20A7C9\">**text**</span> for positive stats, <span style=\"color:#E04355\">**text**</span> for concerning stats, and <span style=\"color:#FCC700\">**text**</span> for neutral but important stats. MAKE IMPORTANT STATISTICS VISUALLY STAND OUT. Make sure to close all HTML tags properly.",

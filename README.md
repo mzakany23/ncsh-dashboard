@@ -66,13 +66,11 @@ Required environment variables:
 
 ### Claude AI Configuration
 
-The dashboard uses Claude AI to generate intelligent summaries of team performance. Configure these optional environment variables to customize the AI behavior:
+The dashboard uses Claude AI to generate intelligent summaries of team performance. Configure the AI model:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CLAUDE_MODEL` | `claude-3-5-haiku-20241022` | Claude model to use for summaries |
-| `CLAUDE_MAX_TOKENS` | `1024` | Maximum tokens for AI responses |
-| `CLAUDE_TEMPERATURE` | `0.2` | Response creativity (0.0-2.0, lower = more consistent) |
 
 #### Available Models
 - `claude-3-5-haiku-20241022` - **Recommended**: Fast, cost-effective ($0.80/$4 per MTok)
@@ -85,8 +83,6 @@ The dashboard uses Claude AI to generate intelligent summaries of team performan
 # Development (.env file)
 ANTHROPIC_API_KEY=your_api_key_here
 CLAUDE_MODEL=claude-3-5-haiku-20241022
-CLAUDE_MAX_TOKENS=1024
-CLAUDE_TEMPERATURE=0.2
 ```
 
 ## Data

@@ -14,6 +14,62 @@ from src.logger import setup_logger
 # Set up logging
 logger = setup_logger(__name__)
 
+# Configuration constants
+DEFAULT_CLAUDE_MODEL = "claude-3-5-haiku-20241022"
+DEFAULT_MAX_TOKENS = 1024
+DEFAULT_TEMPERATURE = 0.2
+
+def get_claude_config():
+    """
+    Get Claude API configuration from environment variables with robust fallbacks.
+
+    Returns:
+        dict: Configuration dictionary with model, max_tokens, and temperature
+    """
+    try:
+        # Get model with fallback
+        model = os.getenv("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL)
+        if not model or model.strip() == "":
+            model = DEFAULT_CLAUDE_MODEL
+            logger.warning(f"Empty CLAUDE_MODEL, using default: {model}")
+
+        # Get max_tokens with validation
+        try:
+            max_tokens = int(os.getenv("CLAUDE_MAX_TOKENS", str(DEFAULT_MAX_TOKENS)))
+            if max_tokens <= 0 or max_tokens > 200000:  # Anthropic's max context window
+                logger.warning(f"Invalid CLAUDE_MAX_TOKENS: {max_tokens}, using default: {DEFAULT_MAX_TOKENS}")
+                max_tokens = DEFAULT_MAX_TOKENS
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid CLAUDE_MAX_TOKENS format, using default: {DEFAULT_MAX_TOKENS}")
+            max_tokens = DEFAULT_MAX_TOKENS
+
+        # Get temperature with validation
+        try:
+            temperature = float(os.getenv("CLAUDE_TEMPERATURE", str(DEFAULT_TEMPERATURE)))
+            if temperature < 0 or temperature > 2:  # Valid range for Anthropic
+                logger.warning(f"Invalid CLAUDE_TEMPERATURE: {temperature}, using default: {DEFAULT_TEMPERATURE}")
+                temperature = DEFAULT_TEMPERATURE
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid CLAUDE_TEMPERATURE format, using default: {DEFAULT_TEMPERATURE}")
+            temperature = DEFAULT_TEMPERATURE
+
+        config = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "temperature": temperature
+        }
+
+        logger.debug(f"Claude config: {config}")
+        return config
+
+    except Exception as e:
+        logger.error(f"Error getting Claude config, using defaults: {e}")
+        return {
+            "model": DEFAULT_CLAUDE_MODEL,
+            "max_tokens": DEFAULT_MAX_TOKENS,
+            "temperature": DEFAULT_TEMPERATURE
+        }
+
 def get_claude_client():
     """
     Create and return an Anthropic API client using the API key from environment variables.
@@ -204,6 +260,10 @@ def generate_summary(
     if not client:
         return "**Error:** Unable to generate summary. Anthropic API key not configured."
 
+    # Get configuration
+    config = get_claude_config()
+    logger.debug(f"Using Claude model: {config['model']}")
+
     try:
         prompt = format_dashboard_data_for_claude(
             selected_team, date_range, opponent_filter, metrics, match_data, chart_data
@@ -213,9 +273,9 @@ def generate_summary(
         if stream:
             # Use streaming mode - returns a generator
             with client.messages.stream(
-                model="claude-3-sonnet-20240229",
-                max_tokens=1024,
-                temperature=0.2,
+                model=config["model"],
+                max_tokens=config["max_tokens"],
+                temperature=config["temperature"],
                 system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. Format your response using Markdown with HTML color spans and bold formatting for emphasis. Use <span style=\"color:#20A7C9\">**text**</span> for positive stats, <span style=\"color:#E04355\">**text**</span> for concerning stats, and <span style=\"color:#FCC700\">**text**</span> for neutral but important stats. MAKE IMPORTANT STATISTICS VISUALLY STAND OUT. Make sure to close all HTML tags properly.",
                 messages=[
                     {"role": "user", "content": prompt}
@@ -226,9 +286,9 @@ def generate_summary(
         else:
             # Normal synchronous mode
             message = client.messages.create(
-                model="claude-3-sonnet-20240229",
-                max_tokens=1024,
-                temperature=0.2,
+                model=config["model"],
+                max_tokens=config["max_tokens"],
+                temperature=config["temperature"],
                 system="You are a soccer analytics assistant that provides insightful, concise summaries of team performance data. Format your response using Markdown with HTML color spans and bold formatting for emphasis. Use <span style=\"color:#20A7C9\">**text**</span> for positive stats, <span style=\"color:#E04355\">**text**</span> for concerning stats, and <span style=\"color:#FCC700\">**text**</span> for neutral but important stats. MAKE IMPORTANT STATISTICS VISUALLY STAND OUT. Make sure to close all HTML tags properly.",
                 messages=[
                     {"role": "user", "content": prompt}
